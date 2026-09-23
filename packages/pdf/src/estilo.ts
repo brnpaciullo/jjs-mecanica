@@ -136,10 +136,21 @@ export function estilo(economizarTinta: boolean, duasViasEmA4: boolean): string 
     .garantia { font-size: 7pt; color: #3b3f45; }
     .garantia h2 { margin-bottom: 0.6mm; }
 
-    .fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5mm; }
+    /* Quatro colunas e miniatura baixa: num A5 a grade de 3 colunas com 26mm
+       de altura empurrava a quarta foto para uma segunda página quase vazia.
+       Assim um conjunto normal de fotos cabe na mesma folha. */
+    .fotos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2mm; }
     .fotos figure { margin: 0; break-inside: avoid; }
-    .fotos img { width: 100%; height: 26mm; object-fit: cover; border: 0.2mm solid #dedcd6; }
-    .fotos figcaption { font-size: 6.5pt; color: #6b6f76; margin-top: .5mm; }
+    .fotos img { width: 100%; height: 19mm; object-fit: cover; border: 0.2mm solid #dedcd6; }
+    .fotos figcaption {
+      font-size: 6pt;
+      color: #6b6f76;
+      margin-top: .3mm;
+      /* Legenda longa não pode esticar a linha inteira da grade. */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     .assinatura { margin-top: 2.5mm; display: flex; gap: 6mm; }
     .assinatura div { flex: 1; border-top: 0.3mm solid #15171B; padding-top: 1mm; font-size: 7pt; text-align: center; }

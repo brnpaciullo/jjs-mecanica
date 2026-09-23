@@ -43,7 +43,12 @@ import {
   revogarDispositivo,
 } from '../lan/sessao.js';
 import { liberarPortaNoFirewall, regraDeFirewallExiste } from '../platform/index.js';
-import { definirEnvioAoCliente, listarMidias } from '../midias/consultar.js';
+import {
+  anexarMidiaAOrdem,
+  definirEnvioAoCliente,
+  listarMidias,
+  listarMidiasSemOs,
+} from '../midias/consultar.js';
 import QRCode from 'qrcode';
 import type { CaminhosApp } from '../caminhos.js';
 import { EH_WINDOWS } from '../platform/index.js';
@@ -540,6 +545,27 @@ export function registrarCanais(caminhos: CaminhosApp): void {
     'midias:enviarAoCliente',
     z.object({ id: z.number().int().positive(), incluir: z.boolean() }),
     ({ id: midiaId, incluir }) => definirEnvioAoCliente(ctx(), midiaId, incluir),
+  );
+
+  /** Caixa de entrada: o que chegou pelo WhatsApp sem OS identificada. */
+  registrarCanal('midias:semOs', semEntrada, () => listarMidiasSemOs(ctx()));
+
+  registrarCanal(
+    'midias:anexar',
+    z.object({ id: z.number().int().positive(), ordemId: z.number().int().positive() }),
+    ({ id: midiaId, ordemId }) => {
+      const contexto = ctx();
+      const ordem = reposOrdens.buscarOrdem(contexto, ordemId);
+      if (!ordem) throw new Error('Essa OS não foi encontrada.');
+
+      const midia = anexarMidiaAOrdem(contexto, midiaId, ordemId);
+      reposEventos.registrarEvento(contexto, {
+        ordemId,
+        tipo: 'midia',
+        descricao: 'Anexou uma mídia que tinha chegado sem OS',
+      });
+      return midia;
+    },
   );
 
   // ---------- busca global (Ctrl+K) ----------

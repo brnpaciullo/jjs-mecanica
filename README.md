@@ -10,10 +10,10 @@ atualizações.
 - **Mecânico**: versão web mobile, aberta no celular pelo Wi-Fi da oficina e
   servida pelo próprio notebook.
 
-> **Etapas 1 a 6 e 8 concluídas.** O balcão funciona ponta a ponta: cadastros,
+> **Todas as 8 etapas concluídas.** O balcão funciona ponta a ponta: cadastros,
 > atendimento, OS com aprovação parcial, quadro por status, **orçamento em PDF
 > A5 e impressão**, **envio pelo WhatsApp**, **backup e auto-update** e o
-> **app do mecânico no celular**. Falta só as mídias pelo WhatsApp (etapa 7).
+> **app do mecânico no celular** e as **mídias pelo WhatsApp**.
 
 ---
 
@@ -281,6 +281,42 @@ Configurações há um botão para recriar a regra.
 
 ---
 
+## Mídias pelo WhatsApp (etapa 7)
+
+O caminho de menor atrito para o mecânico registrar o serviço: mandar a foto no
+**WhatsApp da oficina, para ela mesma**. Ele já está com o WhatsApp aberto e a
+mão suja — qualquer coisa além disso vira foto que fica no celular dele.
+
+O sistema escuta **só o chat consigo mesmo**. Conversa com cliente não é tocada:
+`fromMe` sozinho não bastaria, porque mensagem enviada a um cliente também é
+"de mim"; o destino precisa ser o próprio número.
+
+### Como a foto acha a OS
+
+| Legenda                              | Resultado                                      |
+| ------------------------------------ | ---------------------------------------------- |
+| `OS 142`, `os142`, `#142`, `142`     | vai para a OS 142                              |
+| `ABC-1234`, `abc1234`, `ABC1D23`     | vai para a **OS aberta** daquele carro         |
+| qualquer outra coisa, ou sem legenda | cai em **Mídias sem OS**, com aviso no desktop |
+
+A placa só vale para OS aberta: ela identifica o **carro**, não o atendimento —
+um carro que já passou dez vezes teria dez candidatas.
+
+Quem manda cinco fotos do mesmo serviço escreve a legenda só na primeira, então
+as mídias seguintes **herdam a legenda** por 2 minutos. Passou disso, a foto do
+carro seguinte cairia na OS errada.
+
+### Fechando o ciclo
+
+- **Fotos marcadas** "enviar ao cliente" entram **dentro do PDF** do orçamento —
+  as miniaturas, não as originais: são 4 por linha num A5, e usar a imagem de
+  1920px multiplicaria o tamanho do arquivo sem ganho visível.
+- **Vídeos marcados** vão soltos no WhatsApp, depois do PDF, passando pela
+  mesma fila com intervalo mínimo. Vídeo não cabe num documento, e é
+  justamente ele que mostra o barulho ou a folga da peça.
+
+---
+
 ## Backup, restauração e atualização (etapa 8)
 
 **Backup diário automático.** Roda na inicialização se o último tiver mais de
@@ -395,5 +431,5 @@ clientes.
 4. ✅ **PDF e impressão** — template A5, orçamento e OS, fallback A4 com 2 vias
 5. ✅ **WhatsApp** — conexão por QR, envio de orçamento, aviso de pronto, fallback `wa.me`
 6. ✅ **Servidor LAN e app do mecânico** — Fastify, pareamento, upload de fotos e vídeos
-7. Mídias pelo WhatsApp — captura por legenda, caixa "Mídias sem OS"
+7. ✅ **Mídias pelo WhatsApp** — captura por legenda, caixa "Mídias sem OS"
 8. ✅ **Backup, restauração e auto-update** — instalador final

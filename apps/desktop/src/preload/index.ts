@@ -273,6 +273,8 @@ const api = {
     daOrdem: (id: number) => invocar<MidiaNaTela[]>('midias:daOrdem', { id }),
     enviarAoCliente: (id: number, incluir: boolean) =>
       invocar<unknown>('midias:enviarAoCliente', { id, incluir }),
+    semOs: () => invocar<MidiaNaTela[]>('midias:semOs'),
+    anexar: (id: number, ordemId: number) => invocar<MidiaNaTela>('midias:anexar', { id, ordemId }),
   },
 
   busca: {

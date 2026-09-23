@@ -9,6 +9,7 @@ import { ClienteDetalhe } from './paginas/ClienteDetalhe.js';
 import { VeiculoHistorico } from './paginas/VeiculoHistorico.js';
 import { HistoricoDeOs } from './paginas/HistoricoDeOs.js';
 import { Catalogo } from './paginas/Catalogo.js';
+import { MidiasSemOs } from './paginas/MidiasSemOs.js';
 import { Configuracoes } from './paginas/Configuracoes.js';
 
 /**
@@ -29,6 +30,7 @@ export function App() {
             <Route path="/veiculos/:id" element={<VeiculoHistorico />} />
             <Route path="/historico" element={<HistoricoDeOs />} />
             <Route path="/catalogo" element={<Catalogo />} />
+            <Route path="/midias-sem-os" element={<MidiasSemOs />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

@@ -6,6 +6,7 @@ import { reposConfig, reposItens, reposOrdens, reposVeiculos, reposClientes } fr
 import { obterBanco, obterUsuarioPadrao } from './banco.js';
 import type { CaminhosApp } from './caminhos.js';
 import { logoComoDataUri } from './logo.js';
+import { fotosParaOCliente } from './midias/consultar.js';
 import { log } from './log.js';
 
 /**
@@ -50,7 +51,7 @@ function fontesEmbutidas(): string {
 }
 
 /** Junta tudo que o template precisa, a partir do banco. */
-export function montarDadosPdf(ordemId: number): DadosPdf {
+export function montarDadosPdf(ordemId: number, caminhos: CaminhosApp): DadosPdf {
   const ctx = { db: obterBanco(), usuarioId: obterUsuarioPadrao() };
 
   const ordem = reposOrdens.buscarOrdem(ctx, ordemId);
@@ -102,9 +103,36 @@ export function montarDadosPdf(ordemId: number): DadosPdf {
       observacao: i.observacao,
       aprovado: i.aprovado,
     })),
-    // Fotos marcadas para o cliente entram na etapa 6, quando existirem mídias.
-    fotos: [],
+    fotos: fotosDoOrcamento(ctx, ordemId, caminhos.midias),
   };
+}
+
+/**
+ * Fotos marcadas para o cliente, embutidas no PDF.
+ *
+ * Vão as **miniaturas**, não as fotos inteiras: são 6 por linha num papel A5,
+ * onde nada passa de 3cm. Usar a imagem de 1920px multiplicaria o tamanho do
+ * PDF por dez e faria o WhatsApp recusar o envio, sem nenhum ganho visível.
+ */
+function fotosDoOrcamento(
+  ctx: { db: ReturnType<typeof obterBanco>; usuarioId: number | null },
+  ordemId: number,
+  pasta: string,
+) {
+  return fotosParaOCliente(ctx, ordemId)
+    .map((foto) => {
+      const relativo = foto.thumbPath ?? foto.arquivoPath;
+      const caminho = join(pasta, relativo);
+      if (!existsSync(caminho)) {
+        log.warn(`[pdf] foto não encontrada no disco: ${caminho}`);
+        return null;
+      }
+      return {
+        dataUri: `data:image/jpeg;base64,${readFileSync(caminho).toString('base64')}`,
+        legenda: foto.legenda,
+      };
+    })
+    .filter((f): f is { dataUri: string; legenda: string | null } => f !== null);
 }
 
 function comFontes(resultado: ResultadoTemplate): string {
@@ -153,7 +181,7 @@ export async function gerarPdf(
   caminhos: CaminhosApp,
   opcoes: OpcoesPdf = {},
 ): Promise<ResultadoPdf> {
-  const dados = montarDadosPdf(ordemId);
+  const dados = montarDadosPdf(ordemId, caminhos);
   const resultado = gerarHtml(dados, opcoes);
 
   const bytes = await renderizar(comFontes(resultado), caminhos, (janela) =>
@@ -190,7 +218,7 @@ export async function imprimir(
   const ctx = { db: obterBanco(), usuarioId: obterUsuarioPadrao() };
   const config = reposConfig.lerConfig(ctx);
 
-  const dados = montarDadosPdf(ordemId);
+  const dados = montarDadosPdf(ordemId, caminhos);
   const resultado = gerarHtml(dados, opcoes);
 
   return renderizar(

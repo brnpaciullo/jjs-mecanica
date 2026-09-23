@@ -28,7 +28,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "verificar:backup": "node scripts/verificar-fluxo.mjs verificar-backup --electron",
     "verificar:fluxo": "node scripts/verificar-fluxo.mjs",
-    "verificar:lan": "node scripts/verificar-fluxo.mjs verificar-lan --electron"
+    "verificar:lan": "node scripts/verificar-fluxo.mjs verificar-lan --electron",
+    "verificar:midias": "node scripts/verificar-fluxo.mjs verificar-midias --electron"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

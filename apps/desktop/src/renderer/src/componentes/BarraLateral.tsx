@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BookOpen, Car, ClipboardList, Search, Settings, Users } from 'lucide-react';
+import { BookOpen, Car, ClipboardList, Inbox, Search, Settings, Users } from 'lucide-react';
 import { cn } from '@jjs/ui';
 import { pedirBusca } from '../eventos.js';
 import { IndicadorWhatsApp } from './IndicadorWhatsApp.js';
@@ -10,6 +10,7 @@ const DESTINOS = [
   { para: '/clientes', rotulo: 'Clientes', Icone: Users },
   { para: '/historico', rotulo: 'Histórico de OS', Icone: ClipboardList },
   { para: '/catalogo', rotulo: 'Catálogo', Icone: BookOpen },
+  { para: '/midias-sem-os', rotulo: 'Mídias sem OS', Icone: Inbox },
   { para: '/configuracoes', rotulo: 'Configurações', Icone: Settings },
 ] as const;
 

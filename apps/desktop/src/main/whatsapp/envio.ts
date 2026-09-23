@@ -14,6 +14,9 @@ import { obterBanco, obterUsuarioPadrao } from '../banco.js';
 import type { CaminhosApp } from '../caminhos.js';
 import { gerarPdf } from '../pdf.js';
 import { abrirPasta } from '../platform/index.js';
+import { videosParaOCliente } from '../midias/consultar.js';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { log } from '../log.js';
 import { exigirSocket, filaDoWhatsApp, lerEstadoWhatsApp } from './conexao.js';
 import { ErroDeDestino, escolherJid } from './destino.js';
@@ -156,7 +159,12 @@ export async function enviarOrcamento(
       }),
     );
 
-    registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'enviada', [pdf.caminho]);
+    // Vídeos marcados vão soltos, depois do PDF: vídeo não cabe dentro de um
+    // documento, e é justamente o que mostra o barulho ou a folga da peça.
+    // As fotos marcadas já foram dentro do orçamento.
+    const enviados = await enviarVideosMarcados(dados.ctx, ordemId, destino, caminhos);
+
+    registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'enviada', [pdf.caminho, ...enviados]);
     reposEventos.registrarEvento(dados.ctx, {
       ordemId,
       tipo: 'mensagem',
@@ -164,8 +172,18 @@ export async function enviarOrcamento(
     });
     avancarParaAguardando(ordemId);
 
-    log.info(`[whatsapp] orçamento da OS ${dados.ordem.numero} enviado`);
-    return { status: 'enviada', pdf: pdf.caminho, mensagem: 'Orçamento enviado no WhatsApp.' };
+    log.info(
+      `[whatsapp] orçamento da OS ${dados.ordem.numero} enviado` +
+        (enviados.length > 0 ? ` com ${enviados.length} vídeo(s)` : ''),
+    );
+    return {
+      status: 'enviada',
+      pdf: pdf.caminho,
+      mensagem:
+        enviados.length > 0
+          ? `Orçamento e ${enviados.length} vídeo(s) enviados no WhatsApp.`
+          : 'Orçamento enviado no WhatsApp.',
+    };
   } catch (erro) {
     registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'falhou', [pdf.caminho], String(erro));
     log.error('[whatsapp] falhou ao enviar o orçamento', erro);
@@ -215,6 +233,45 @@ export async function enviarTeste(telefone: string): Promise<ResultadoEnvio> {
     status: 'enviada',
     mensagem: `Mensagem de teste enviada para ${destino.split('@')[0]}.`,
   };
+}
+
+/**
+ * Manda os vídeos marcados como "enviar ao cliente".
+ *
+ * Cada um passa pela fila, respeitando o intervalo mínimo — mandar três vídeos
+ * em rajada é exatamente o comportamento que faz o WhatsApp derrubar o número.
+ * Um vídeo que falha não impede os outros nem desfaz o envio do orçamento.
+ */
+async function enviarVideosMarcados(
+  ctx: ReturnType<typeof contexto>,
+  ordemId: number,
+  destino: string,
+  caminhos: CaminhosApp,
+): Promise<string[]> {
+  const enviados: string[] = [];
+
+  for (const video of videosParaOCliente(ctx, ordemId)) {
+    const caminho = join(caminhos.midias, video.arquivoPath);
+    if (!existsSync(caminho)) {
+      log.warn(`[whatsapp] vídeo marcado não está no disco: ${caminho}`);
+      continue;
+    }
+
+    try {
+      await filaDoWhatsApp().enfileirar(() =>
+        exigirSocket().sendMessage(destino, {
+          video: readFileSync(caminho),
+          mimetype: 'video/mp4',
+          caption: video.legenda ?? undefined,
+        }),
+      );
+      enviados.push(caminho);
+    } catch (erro) {
+      log.error(`[whatsapp] falhou ao enviar o vídeo ${video.id}`, erro);
+    }
+  }
+
+  return enviados;
 }
 
 function avancarParaAguardando(ordemId: number): void {

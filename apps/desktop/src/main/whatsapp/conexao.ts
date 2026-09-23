@@ -20,6 +20,7 @@ import type { CaminhosApp } from '../caminhos.js';
 import { log } from '../log.js';
 import { FilaDeEnvio } from './fila.js';
 import { ESTADO_INICIAL, type EstadoWhatsApp } from './estado.js';
+import { escutarMidiasDoWhatsApp } from './receber.js';
 
 /** Intervalo mínimo entre mensagens. Menos que isso vira rajada e derruba o número. */
 const INTERVALO_ENTRE_ENVIOS_MS = 3000;
@@ -31,7 +32,7 @@ type Ouvinte = (estado: EstadoWhatsApp) => void;
 
 let socket: WASocket | null = null;
 let estado: EstadoWhatsApp = { ...ESTADO_INICIAL };
-let caminhos: CaminhosApp | null = null;
+let caminhosApp: CaminhosApp | null = null;
 let ouvintes: Ouvinte[] = [];
 let tentativas = 0;
 let timerReconexao: ReturnType<typeof setTimeout> | null = null;
@@ -81,8 +82,8 @@ export function filaDoWhatsApp(): FilaDeEnvio {
  * espera crescente; só "sair do WhatsApp" pelo celular ou o botão Desconectar
  * exigem parear de novo.
  */
-export async function iniciarWhatsApp(caminhosApp: CaminhosApp): Promise<void> {
-  caminhos = caminhosApp;
+export async function iniciarWhatsApp(caminhosDoApp: CaminhosApp): Promise<void> {
+  caminhosApp = caminhosDoApp;
   desligadoDeProposito = false;
 
   if (socket) {
@@ -92,7 +93,7 @@ export async function iniciarWhatsApp(caminhosApp: CaminhosApp): Promise<void> {
 
   atualizar({ situacao: 'conectando', aviso: null });
 
-  const { state, saveCreds } = await useMultiFileAuthState(caminhos.whatsappSession);
+  const { state, saveCreds } = await useMultiFileAuthState(caminhosApp.whatsappSession);
   const { version } = await fetchLatestBaileysVersion();
   log.info(`[whatsapp] protocolo ${version.join('.')}`);
 
@@ -120,6 +121,11 @@ export async function iniciarWhatsApp(caminhosApp: CaminhosApp): Promise<void> {
 
     if (connection === 'open') {
       tentativas = 0;
+
+      // Só depois da conexão abrir: antes disso não há `socket.user` para
+      // saber qual é o chat consigo mesmo.
+      if (socket && caminhosApp) escutarMidiasDoWhatsApp(socket, caminhosApp);
+
       const eu = socket?.user;
       atualizar({
         situacao: 'conectado',
@@ -180,7 +186,7 @@ function tratarQueda(codigo: number): void {
 
   if (timerReconexao) clearTimeout(timerReconexao);
   timerReconexao = setTimeout(() => {
-    if (caminhos) void iniciarWhatsApp(caminhos).catch((e) => log.error('[whatsapp]', e));
+    if (caminhosApp) void iniciarWhatsApp(caminhosApp).catch((e) => log.error('[whatsapp]', e));
   }, espera);
 }
 
@@ -202,8 +208,8 @@ export async function desconectarWhatsApp(): Promise<void> {
 }
 
 function limparSessao(): void {
-  if (!caminhos) return;
-  rmSync(caminhos.whatsappSession, { recursive: true, force: true });
+  if (!caminhosApp) return;
+  rmSync(caminhosApp.whatsappSession, { recursive: true, force: true });
 }
 
 export function encerrarWhatsApp(): void {
