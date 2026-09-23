@@ -172,28 +172,46 @@ describe('pela placa', () => {
 describe('legenda herdada pelas mídias seguintes', () => {
   afterEach(() => vi.useRealTimers());
 
+  const JOAO = '5541999990001';
+  const PEDRO = '5541999990002';
+
   it('a foto seguinte, sem legenda, herda a anterior', () => {
-    lembrarLegenda('OS 142', { ordemId: 7, por: 'numero', numero: 142 });
-    expect(legendaHerdada()?.vinculo?.ordemId).toBe(7);
+    lembrarLegenda(JOAO, 'OS 142', { ordemId: 7, por: 'numero', numero: 142 });
+    expect(legendaHerdada(JOAO)?.vinculo?.ordemId).toBe(7);
   });
 
   it('não herda nada quando não houve legenda antes', () => {
-    expect(legendaHerdada()).toBeNull();
+    expect(legendaHerdada(JOAO)).toBeNull();
   });
 
   it('esquece depois de 2 minutos — senão a foto do carro seguinte cairia na OS errada', () => {
-    lembrarLegenda('OS 142', { ordemId: 7, por: 'numero', numero: 142 });
+    lembrarLegenda(JOAO, 'OS 142', { ordemId: 7, por: 'numero', numero: 142 });
 
     vi.useFakeTimers();
     vi.setSystemTime(Date.now() + 3 * 60 * 1000);
-    expect(legendaHerdada()).toBeNull();
+    expect(legendaHerdada(JOAO)).toBeNull();
   });
 
   it('dentro da janela ainda vale', () => {
-    lembrarLegenda('OS 142', { ordemId: 7, por: 'numero', numero: 142 });
+    lembrarLegenda(JOAO, 'OS 142', { ordemId: 7, por: 'numero', numero: 142 });
 
     vi.useFakeTimers();
     vi.setSystemTime(Date.now() + 60 * 1000);
-    expect(legendaHerdada()?.vinculo?.ordemId).toBe(7);
+    expect(legendaHerdada(JOAO)?.vinculo?.ordemId).toBe(7);
+  });
+
+  it('num grupo, um mecânico não herda a legenda do outro', () => {
+    lembrarLegenda(JOAO, 'OS 142', { ordemId: 7, por: 'numero', numero: 142 });
+    lembrarLegenda(PEDRO, 'OS 900', { ordemId: 9, por: 'numero', numero: 900 });
+
+    // A foto sem legenda de cada um cai na OS de quem mandou, não na última
+    // que passou pelo grupo.
+    expect(legendaHerdada(JOAO)?.vinculo?.ordemId).toBe(7);
+    expect(legendaHerdada(PEDRO)?.vinculo?.ordemId).toBe(9);
+  });
+
+  it('quem nunca escreveu legenda não herda a de quem escreveu', () => {
+    lembrarLegenda(JOAO, 'OS 142', { ordemId: 7, por: 'numero', numero: 142 });
+    expect(legendaHerdada(PEDRO)).toBeNull();
   });
 });

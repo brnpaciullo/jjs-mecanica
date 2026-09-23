@@ -19,11 +19,13 @@ import { escolherLogo, removerLogo } from '../logo.js';
 import { abrirPasta, revelarArquivo } from '../platform/index.js';
 import {
   desconectarWhatsApp,
+  exigirSocket,
   iniciarWhatsApp,
   lerEstadoWhatsApp,
   observarWhatsApp,
 } from '../whatsapp/conexao.js';
 import { avisarPronto, enviarOrcamento, enviarTeste } from '../whatsapp/envio.js';
+import { listarGrupos } from '../whatsapp/grupos.js';
 import { obterJanela } from '../janela.js';
 import { fazerBackup, listarBackups } from '../backup/fazer.js';
 import { lerIndice } from '../backup/indice.js';
@@ -420,6 +422,17 @@ export function registrarCanais(caminhos: CaminhosApp): void {
     enviarOrcamento(ordemId, caminhos),
   );
   registrarCanal('whatsapp:avisarPronto', id, ({ id: ordemId }) => avisarPronto(ordemId, caminhos));
+
+  registrarCanal('whatsapp:grupos', semEntrada, () => listarGrupos(exigirSocket()));
+
+  // Escolher um grupo troca a fonte das fotos; escolher "nenhum" volta para o
+  // chat da oficina consigo mesma.
+  registrarCanal(
+    'whatsapp:definirGrupo',
+    z.object({ jid: z.string().nullable(), nome: z.string().nullable() }),
+    ({ jid, nome }) =>
+      reposConfig.salvarConfig(ctx(), { whatsappGrupoJid: jid, whatsappGrupoNome: nome }),
+  );
 
   // O estado da conexão muda sozinho (QR novo, queda, reconexão). Em vez de a
   // tela ficar perguntando, o main empurra a mudança assim que ela acontece.

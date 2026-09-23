@@ -66,22 +66,38 @@ export function acharOrdemPelaLegenda(ctx: Contexto, legenda: string): Vinculo |
  */
 const JANELA_MS = 2 * 60 * 1000;
 
-let ultima: { legenda: string; vinculo: Vinculo | null; em: number } | null = null;
-
-export function lembrarLegenda(legenda: string, vinculo: Vinculo | null): void {
-  ultima = { legenda, vinculo, em: Date.now() };
+interface Lembranca {
+  legenda: string;
+  vinculo: Vinculo | null;
+  em: number;
 }
 
-/** Recupera a legenda recente, se ainda estiver dentro da janela. */
-export function legendaHerdada(): { legenda: string; vinculo: Vinculo | null } | null {
+/**
+ * Uma lembrança por remetente, não uma só para todo mundo.
+ *
+ * No chat consigo mesmo havia um único remetente e um estado global bastava.
+ * Num grupo, dois mecânicos mandando fotos ao mesmo tempo intercalam as
+ * mensagens: com estado global, a foto de um herdaria a OS do outro e iria
+ * para o carro errado, sem ninguém perceber.
+ */
+const ultimas = new Map<string, Lembranca>();
+
+export function lembrarLegenda(remetente: string, legenda: string, vinculo: Vinculo | null): void {
+  ultimas.set(remetente, { legenda, vinculo, em: Date.now() });
+}
+
+/** Recupera a legenda recente daquele remetente, se ainda estiver na janela. */
+export function legendaHerdada(remetente: string): { legenda: string; vinculo: Vinculo | null } | null {
+  const ultima = ultimas.get(remetente);
   if (!ultima) return null;
+
   if (Date.now() - ultima.em > JANELA_MS) {
-    ultima = null;
+    ultimas.delete(remetente);
     return null;
   }
   return { legenda: ultima.legenda, vinculo: ultima.vinculo };
 }
 
 export function esquecerLegenda(): void {
-  ultima = null;
+  ultimas.clear();
 }

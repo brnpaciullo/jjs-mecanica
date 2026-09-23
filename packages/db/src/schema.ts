@@ -37,6 +37,14 @@ export const oficinaConfig = sqliteTable('oficina_config', {
   economizarTinta: integer('economizar_tinta', { mode: 'boolean' }).notNull().default(true),
   templateMsgOrcamento: text('template_msg_orcamento'),
   templateMsgPronto: text('template_msg_pronto'),
+  /**
+   * Grupo do WhatsApp que a oficina escuta para receber fotos. Guardado pelo
+   * JID (`...@g.us`) porque o nome do grupo muda a qualquer momento. Nulo =
+   * ninguém escolheu ainda, e vale o chat da oficina consigo mesma.
+   */
+  whatsappGrupoJid: text('whatsapp_grupo_jid'),
+  /** Só para mostrar na tela sem precisar do WhatsApp conectado. */
+  whatsappGrupoNome: text('whatsapp_grupo_nome'),
   atualizadoEm: text('atualizado_em').notNull().default(agora),
 });
 

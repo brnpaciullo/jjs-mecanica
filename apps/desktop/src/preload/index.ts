@@ -36,6 +36,7 @@ import type { EstadoAtualizacao } from '../main/atualizacao.js';
 import type { EstadoDoServidor } from '../main/lan/servidor.js';
 import type { MidiaNaTela } from '../main/midias/consultar.js';
 import type { ResultadoEnvio } from '../main/whatsapp/envio.js';
+import type { GrupoDoWhatsApp } from '../main/whatsapp/grupos.js';
 
 /**
  * Única ponte entre a tela e o processo main. O renderer nunca vê o Node:
@@ -210,6 +211,9 @@ const api = {
     teste: (telefone: string) => invocar<ResultadoEnvio>('whatsapp:teste', { telefone }),
     enviarOrcamento: (id: number) => invocar<ResultadoEnvio>('whatsapp:enviarOrcamento', { id }),
     avisarPronto: (id: number) => invocar<ResultadoEnvio>('whatsapp:avisarPronto', { id }),
+    grupos: () => invocar<GrupoDoWhatsApp[]>('whatsapp:grupos'),
+    definirGrupo: (jid: string | null, nome: string | null) =>
+      invocar<ConfigRegistro>('whatsapp:definirGrupo', { jid, nome }),
     /**
      * Escuta as mudanças de conexão empurradas pelo main (QR novo, queda,
      * reconexão). Devolve a função de parar de escutar.

@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Loader2, MessageCircle, QrCode, Send, Unplug } from 'lucide-react';
 import { formatarTelefone, mascararTelefone } from '@jjs/core';
 import { Botao, Campo } from '@jjs/ui';
+import type { ConfigRegistro } from '@jjs/db';
 import { useWhatsApp } from '../hooks/useWhatsApp.js';
+import { useConsulta } from '../hooks/useConsulta.js';
+import { SeletorDeGrupo } from './SeletorDeGrupo.js';
 import { Aviso } from './Aviso.js';
 import { Confirmacao } from './Confirmacao.js';
 import { mensagemDeErro } from '../erro.js';
@@ -10,6 +13,7 @@ import { mensagemDeErro } from '../erro.js';
 /** Configurações > WhatsApp: conectar, conferir e desconectar. */
 export function CartaoWhatsApp() {
   const estado = useWhatsApp();
+  const config = useConsulta<ConfigRegistro>(() => window.jjs.config.ler(), []);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [recado, setRecado] = useState<string | null>(null);
@@ -54,6 +58,8 @@ export function CartaoWhatsApp() {
                 </p>
               </div>
             </div>
+
+            <SeletorDeGrupo config={config.dados} aoTrocar={config.recarregar} />
 
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-56 flex-1">
