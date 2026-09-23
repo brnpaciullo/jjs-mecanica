@@ -74,21 +74,65 @@ jobs:
           echo "As três tentativas de publicação falharam."
           exit 1
 
-      # Sem isto, um upload parcial passa despercebido: o release fica no ar
-      # sem instalador, e o auto-update da oficina aponta para o nada.
-      - name: Conferir se o instalador está mesmo no release
+      # Esta etapa existe porque já falhamos de três jeitos diferentes:
+      # release publicado sem o .exe, build publicando cedo demais, e release
+      # que simplesmente não aparece. Em vez de só conferir, ela **conserta**:
+      # promove rascunho para publicado e, se faltar anexo, sobe o arquivo que
+      # já está no disco. O `gh` vem pronto no runner.
+      - name: Conferir e consertar o release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
           tag="${GITHUB_REF_NAME}"
-          resposta=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${tag}")
+          pasta="apps/desktop/release"
 
-          echo "$resposta" | grep -q '"name": *"[^"]*\.exe"' || {
-            echo "O release $tag foi criado SEM o instalador .exe."
-            echo "Anexos encontrados:"
-            echo "$resposta" | grep -o '"name": *"[^"]*"' || true
-            exit 1
+          echo "Arquivos gerados:"
+          ls -la "$pasta" || true
+
+          # /releases/tags/ NÃO encontra rascunho, nem autenticado. Por isso a
+          # busca é na lista completa, que com token inclui os rascunhos.
+          achar() {
+            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.tag_name==\"$tag\") | {id, draft, assets: [.assets[].name]}" 2>/dev/null
           }
-          echo "Instalador confirmado no release $tag."
+
+          info=$(achar)
+          echo "Release encontrado: ${info:-nenhum}"
+
+          if [ -z "$info" ]; then
+            echo "Nenhum release para $tag. Criando com os arquivos do disco."
+            gh release create "$tag" --title "$tag" --notes "Versão $tag" \
+              "$pasta"/*.exe "$pasta"/latest.yml "$pasta"/*.blockmap
+            info=$(achar)
+          fi
+
+          id=$(echo "$info" | jq -r .id)
+          rascunho=$(echo "$info" | jq -r .draft)
+
+          if [ "$rascunho" = "true" ]; then
+            echo "Estava como rascunho — publicando, senão o auto-update não enxerga."
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/$id" -f draft=false >/dev/null
+          fi
+
+          # Garante os dois anexos que importam: o instalador e o manifesto do
+          # auto-update. --clobber substitui o que estiver pela metade.
+          for arquivo in "$pasta"/*.exe "$pasta"/latest.yml; do
+            nome=$(basename "$arquivo")
+            if ! echo "$info" | jq -e --arg n "$nome" '.assets | index($n)' >/dev/null; then
+              echo "Faltava $nome — enviando."
+              gh release upload "$tag" "$arquivo" --clobber
+            fi
+          done
+
+          final=$(achar)
+          echo "Estado final: $final"
+          echo "$final" | jq -e '.draft == false' >/dev/null \
+            || { echo "O release continua como rascunho."; exit 1; }
+          echo "$final" | jq -e '.assets | map(select(endswith(".exe"))) | length > 0' >/dev/null \
+            || { echo "O release está sem o instalador."; exit 1; }
+          echo "$final" | jq -e '.assets | index("latest.yml")' >/dev/null \
+            || { echo "O release está sem o latest.yml — o auto-update não funcionaria."; exit 1; }
+
+          echo "Release $tag publicado, com instalador e latest.yml."
