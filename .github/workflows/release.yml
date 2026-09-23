@@ -33,7 +33,15 @@ jobs:
         run: npm test
 
       - name: Checagem de tipos
-        run: npm run typecheck
+        shell: bash
+        run: |
+          # Sem o `2>&1` o tsc manda o erro para stderr e ele some no meio do
+          # ruído do npm, dificultando o diagnóstico à distância.
+          npm run typecheck 2>&1 | tee /tmp/typecheck.txt || {
+            echo "::error::Falha na checagem de tipos. Erros:"
+            grep -E "error TS" /tmp/typecheck.txt || true
+            exit 1
+          }
 
       # Construir e publicar são passos separados de propósito. Antes eram um
       # só, e quando o upload do .exe de 122 MB falhou sobrou um release
@@ -47,7 +55,10 @@ jobs:
         run: npm run empacotar:win --workspace @jjs/desktop
 
       - name: Guardar o instalador como artefato do build
-        if: always()
+        # `success()` e não `always()`: com o build pulado por uma falha
+        # anterior não há .exe, e o passo falhava de novo — escondendo a causa
+        # real atrás de um segundo erro.
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: instalador-windows
