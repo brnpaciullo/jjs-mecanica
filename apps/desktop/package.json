@@ -1,6 +1,6 @@
 {
   "name": "@jjs/desktop",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "JJS Mecânica - aplicativo do balcão",
   "main": "./out/main/index.js",
