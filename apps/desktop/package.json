@@ -20,6 +20,7 @@
     "@jjs/pdf": "*",
     "@jjs/ui": "*",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "archiver": "^8.0.0",
     "better-sqlite3": "13.0.3",
     "electron-log": "5.4.4",
     "electron-updater": "6.8.9",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
+    "@types/archiver": "^8.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

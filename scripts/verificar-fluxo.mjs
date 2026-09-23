@@ -16,15 +16,17 @@ import { build } from 'esbuild';
 
 const require = createRequire(import.meta.url);
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
-const bundle = join(raiz, 'node_modules', '.jjs-fluxo.cjs');
+// Qual script verificar; por padrão o do fluxo do balcão.
+const alvo = process.argv[2] ?? 'verificar-fluxo';
+const bundle = join(raiz, 'node_modules', `.jjs-${alvo}.cjs`);
 
 await build({
-  entryPoints: [join(raiz, 'scripts', 'verificar-fluxo.ts')],
+  entryPoints: [join(raiz, 'scripts', `${alvo}.ts`)],
   bundle: true,
   platform: 'node',
   format: 'cjs',
   // Nativo: precisa ser resolvido em tempo de execução, nunca empacotado.
-  external: ['better-sqlite3'],
+  external: ['better-sqlite3', 'archiver'],
   outfile: bundle,
   logLevel: 'error',
 });

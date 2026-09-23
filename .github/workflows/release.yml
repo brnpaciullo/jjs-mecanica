@@ -35,16 +35,56 @@ jobs:
       - name: Checagem de tipos
         run: npm run typecheck
 
-      - name: Gerar instalador e publicar no GitHub Releases
-        run: npm run publicar:win --workspace @jjs/desktop
-        env:
-          # Token automático do Actions: publica no release desta mesma tag.
-          # É daqui que o electron-updater vai ler a nova versão.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Construir e publicar são passos separados de propósito. Antes eram um
+      # só, e quando o upload do .exe de 122 MB falhou sobrou um release
+      # PUBLICADO sem instalador — e o artefato nem chegou a ser salvo, porque
+      # vinha depois. Agora o instalador é garantido antes de qualquer upload.
+      - name: Gerar o instalador
+        run: npm run empacotar:win --workspace @jjs/desktop
 
       - name: Guardar o instalador como artefato do build
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: instalador-windows
           path: apps/desktop/release/*.exe
           if-no-files-found: error
+
+      - name: Publicar no GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # O upload de um arquivo grande falha de vez em quando por rede.
+          # Tentar de novo é bem melhor que deixar um release pela metade.
+          for tentativa in 1 2 3; do
+            echo "::group::Publicação — tentativa $tentativa"
+            if npm run publicar:win --workspace @jjs/desktop; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "Tentativa $tentativa falhou; esperando antes de repetir."
+            sleep 20
+          done
+          echo "As três tentativas de publicação falharam."
+          exit 1
+
+      # Sem isto, um upload parcial passa despercebido: o release fica no ar
+      # sem instalador, e o auto-update da oficina aponta para o nada.
+      - name: Conferir se o instalador está mesmo no release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          resposta=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${tag}")
+
+          echo "$resposta" | grep -q '"name": *"[^"]*\.exe"' || {
+            echo "O release $tag foi criado SEM o instalador .exe."
+            echo "Anexos encontrados:"
+            echo "$resposta" | grep -o '"name": *"[^"]*"' || true
+            exit 1
+          }
+          echo "Instalador confirmado no release $tag."
