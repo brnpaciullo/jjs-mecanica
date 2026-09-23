@@ -38,6 +38,9 @@ export interface DadosPdf {
     validadeAte: string | null;
     formaPagamento: string | null;
     kmEntrada: number | null;
+    combustivel: string | null;
+    /** Avarias, objetos deixados no carro e observações da recepção. */
+    checklistEntrada: { avarias: string[]; objetos: string[]; observacoes: string } | null;
     descontoCentavos: number;
   };
   cliente: { nome: string; telefone: string };
@@ -53,11 +56,14 @@ export interface DadosPdf {
 }
 
 /**
- * `orcamento` mostra todos os itens; `ordem_servico` mostra só os aprovados.
+ * `recibo_entrada` é o comprovante de que a oficina recebeu o carro: registra
+ * o estado dele na chegada e **não fala de dinheiro**. `orcamento` mostra
+ * todos os itens; `ordem_servico` mostra só os aprovados.
+ *
  * Quem decide é o status, mas dá para forçar (reimprimir o orçamento original
  * depois de aprovado, por exemplo).
  */
-export type VariacaoPdf = 'orcamento' | 'ordem_servico';
+export type VariacaoPdf = 'recibo_entrada' | 'orcamento' | 'ordem_servico';
 
 export interface OpcoesPdf {
   variacao?: VariacaoPdf;
@@ -70,6 +76,6 @@ export interface ResultadoTemplate {
   variacao: VariacaoPdf;
   titulo: string;
   totais: Totais;
-  /** Nome sugerido: Orcamento-OS0001-ABC1D23.pdf */
+  /** Nome sugerido: Orcamento-OS0001-ABC1D23.pdf, Entrada-OS0001-... */
   nomeArquivo: string;
 }

@@ -287,6 +287,13 @@ function Textos() {
           mudar={mudar}
         />
         <AreaTexto
+          campo="templateMsgRecebimento"
+          rotulo="Mensagem ao receber o carro"
+          dica="Variáveis: {cliente} {veiculo} {placa} {numero_os} — sem {total}, aqui ainda não há preço"
+          valor={valor}
+          mudar={mudar}
+        />
+        <AreaTexto
           campo="templateMsgOrcamento"
           rotulo="Mensagem ao enviar o orçamento"
           dica="Variáveis: {cliente} {veiculo} {placa} {numero_os} {total}"

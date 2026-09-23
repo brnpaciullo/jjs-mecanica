@@ -37,6 +37,8 @@ export const oficinaConfig = sqliteTable('oficina_config', {
   economizarTinta: integer('economizar_tinta', { mode: 'boolean' }).notNull().default(true),
   templateMsgOrcamento: text('template_msg_orcamento'),
   templateMsgPronto: text('template_msg_pronto'),
+  /** Mensagem que acompanha o comprovante de entrada, na recepção do carro. */
+  templateMsgRecebimento: text('template_msg_recebimento'),
   /**
    * Grupo do WhatsApp que a oficina escuta para receber fotos. Guardado pelo
    * JID (`...@g.us`) porque o nome do grupo muda a qualquer momento. Nulo =
@@ -220,7 +222,7 @@ export const mensagens = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     ordemId: integer('ordem_id').references(() => ordens.id),
     clienteId: integer('cliente_id').references(() => clientes.id),
-    tipo: text('tipo').$type<'orcamento' | 'pronto' | 'avulsa'>().notNull(),
+    tipo: text('tipo').$type<'recebimento' | 'orcamento' | 'pronto' | 'avulsa'>().notNull(),
     conteudo: text('conteudo').notNull(),
     anexos: text('anexos', { mode: 'json' }).$type<string[]>(),
     status: text('status').$type<'enviada' | 'falhou' | 'fallback_link'>().notNull(),

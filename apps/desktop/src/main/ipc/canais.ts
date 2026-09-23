@@ -24,7 +24,13 @@ import {
   lerEstadoWhatsApp,
   observarWhatsApp,
 } from '../whatsapp/conexao.js';
-import { avisarPronto, enviarOrcamento, enviarTeste } from '../whatsapp/envio.js';
+import {
+  avisarPronto,
+  enviarComprovanteEntrada,
+  enviarMidiasDaOrdem,
+  enviarOrcamento,
+  enviarTeste,
+} from '../whatsapp/envio.js';
 import { listarGrupos } from '../whatsapp/grupos.js';
 import { obterJanela } from '../janela.js';
 import { fazerBackup, listarBackups } from '../backup/fazer.js';
@@ -132,6 +138,7 @@ export function registrarCanais(caminhos: CaminhosApp): void {
       economizarTinta: z.boolean().optional(),
       templateMsgOrcamento: z.string().nullable().optional(),
       templateMsgPronto: z.string().nullable().optional(),
+      templateMsgRecebimento: z.string().nullable().optional(),
     }),
     (entrada) => reposConfig.salvarConfig(ctx(), entrada),
   );
@@ -420,6 +427,12 @@ export function registrarCanais(caminhos: CaminhosApp): void {
   );
   registrarCanal('whatsapp:enviarOrcamento', id, ({ id: ordemId }) =>
     enviarOrcamento(ordemId, caminhos),
+  );
+  registrarCanal('whatsapp:enviarComprovante', id, ({ id: ordemId }) =>
+    enviarComprovanteEntrada(ordemId, caminhos),
+  );
+  registrarCanal('whatsapp:enviarMidias', id, ({ id: ordemId }) =>
+    enviarMidiasDaOrdem(ordemId, caminhos),
   );
   registrarCanal('whatsapp:avisarPronto', id, ({ id: ordemId }) => avisarPronto(ordemId, caminhos));
 

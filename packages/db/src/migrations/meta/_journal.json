@@ -15,6 +15,13 @@
       "when": 1790196057613,
       "tag": "0001_bumpy_orphan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790200132964,
+      "tag": "0002_fancy_ezekiel",
+      "breakpoints": true
     }
   ]
 }

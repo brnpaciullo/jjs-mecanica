@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { shell } from 'electron';
 import { formatarDinheiro, formatarNumeroOs, formatarPlaca, paraWhatsApp } from '@jjs/core';
 import {
+  TEMPLATE_RECEBIMENTO_PADRAO,
   mensagens,
   reposConfig,
   reposItens,
@@ -14,7 +15,7 @@ import { obterBanco, obterUsuarioPadrao } from '../banco.js';
 import type { CaminhosApp } from '../caminhos.js';
 import { gerarPdf } from '../pdf.js';
 import { abrirPasta } from '../platform/index.js';
-import { videosParaOCliente } from '../midias/consultar.js';
+import { fotosParaOCliente, videosParaOCliente } from '../midias/consultar.js';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { log } from '../log.js';
@@ -34,7 +35,10 @@ async function resolverDestino(telefone: string): Promise<string> {
   return escolherJid(resposta, telefone);
 }
 
-export type TipoMensagem = 'orcamento' | 'pronto' | 'avulsa';
+const TEXTO_MIDIAS_AVULSAS =
+  'Olá {cliente}! Seguem as fotos e vídeos da {veiculo} placa {placa} (OS {numero_os}).';
+
+export type TipoMensagem = 'recebimento' | 'orcamento' | 'pronto' | 'avulsa';
 
 export interface ResultadoEnvio {
   status: 'enviada' | 'fallback_link';
@@ -159,12 +163,16 @@ export async function enviarOrcamento(
       }),
     );
 
-    // Vídeos marcados vão soltos, depois do PDF: vídeo não cabe dentro de um
-    // documento, e é justamente o que mostra o barulho ou a folga da peça.
-    // As fotos marcadas já foram dentro do orçamento.
-    const enviados = await enviarVideosMarcados(dados.ctx, ordemId, destino, caminhos);
+    // Fotos e vídeos marcados vão soltos, depois do PDF. O vídeo não cabe
+    // dentro de um documento, e é justamente o que mostra o barulho ou a folga
+    // da peça; a foto vai de novo porque no PDF ela é miniatura de impressão.
+    const midias = await enviarMidiasMarcadas(dados.ctx, ordemId, destino, caminhos);
+    const resumo = resumoDeMidias(midias.fotos, midias.videos);
 
-    registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'enviada', [pdf.caminho, ...enviados]);
+    registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'enviada', [
+      pdf.caminho,
+      ...midias.caminhos,
+    ]);
     reposEventos.registrarEvento(dados.ctx, {
       ordemId,
       tipo: 'mensagem',
@@ -174,19 +182,92 @@ export async function enviarOrcamento(
 
     log.info(
       `[whatsapp] orçamento da OS ${dados.ordem.numero} enviado` +
-        (enviados.length > 0 ? ` com ${enviados.length} vídeo(s)` : ''),
+        (resumo ? ` com ${resumo}` : ''),
     );
     return {
       status: 'enviada',
       pdf: pdf.caminho,
-      mensagem:
-        enviados.length > 0
-          ? `Orçamento e ${enviados.length} vídeo(s) enviados no WhatsApp.`
-          : 'Orçamento enviado no WhatsApp.',
+      mensagem: resumo
+        ? `Orçamento e ${resumo} enviados no WhatsApp.`
+        : 'Orçamento enviado no WhatsApp.',
     };
   } catch (erro) {
     registrar(ordemId, dados.cliente.id, 'orcamento', texto, 'falhou', [pdf.caminho], String(erro));
     log.error('[whatsapp] falhou ao enviar o orçamento', erro);
+    return fallbackLink(dados.cliente.telefone, texto, pdf.caminho, caminhos);
+  }
+}
+
+/**
+ * Comprovante de entrada: confirma ao cliente que o carro chegou.
+ *
+ * Existe porque, antes disto, o único documento que dava para mandar era o
+ * orçamento — e na recepção ele sai com a tabela vazia e total R$ 0,00, que o
+ * cliente lê como "de graça". O PDF aqui é a variação `recibo_entrada`, que o
+ * `variacaoPara()` escolhe sozinho enquanto a OS está em recepção ou
+ * diagnóstico.
+ *
+ * **Não avança o status**, ao contrário do orçamento: o carro acabou de
+ * entrar, e o quadro deve continuar mostrando isso.
+ */
+export async function enviarComprovanteEntrada(
+  ordemId: number,
+  caminhos: CaminhosApp,
+): Promise<ResultadoEnvio> {
+  const dados = dadosDaOrdem(ordemId);
+  const texto = montarTexto(
+    dados.config.templateMsgRecebimento,
+    TEMPLATE_RECEBIMENTO_PADRAO,
+    dados,
+  );
+
+  const pdf = await gerarPdf(ordemId, caminhos);
+
+  if (lerEstadoWhatsApp().situacao !== 'conectado') {
+    const r = await fallbackLink(dados.cliente.telefone, texto, pdf.caminho, caminhos);
+    registrar(ordemId, dados.cliente.id, 'recebimento', texto, 'fallback_link', [pdf.caminho]);
+    return r;
+  }
+
+  try {
+    const destino = await resolverDestino(dados.cliente.telefone);
+
+    await filaDoWhatsApp().enfileirar(() => exigirSocket().sendMessage(destino, { text: texto }));
+    await filaDoWhatsApp().enfileirar(() =>
+      exigirSocket().sendMessage(destino, {
+        document: readFileSync(pdf.caminho),
+        mimetype: 'application/pdf',
+        fileName: pdf.nomeArquivo,
+      }),
+    );
+
+    const midias = await enviarMidiasMarcadas(dados.ctx, ordemId, destino, caminhos);
+    const resumo = resumoDeMidias(midias.fotos, midias.videos);
+
+    registrar(ordemId, dados.cliente.id, 'recebimento', texto, 'enviada', [
+      pdf.caminho,
+      ...midias.caminhos,
+    ]);
+    reposEventos.registrarEvento(dados.ctx, {
+      ordemId,
+      tipo: 'mensagem',
+      descricao: 'Enviou o comprovante de entrada no WhatsApp',
+    });
+
+    log.info(
+      `[whatsapp] comprovante de entrada da OS ${dados.ordem.numero} enviado` +
+        (resumo ? ` com ${resumo}` : ''),
+    );
+    return {
+      status: 'enviada',
+      pdf: pdf.caminho,
+      mensagem: resumo
+        ? `Comprovante de entrada e ${resumo} enviados no WhatsApp.`
+        : 'Comprovante de entrada enviado no WhatsApp.',
+    };
+  } catch (erro) {
+    registrar(ordemId, dados.cliente.id, 'recebimento', texto, 'falhou', [pdf.caminho], String(erro));
+    log.error('[whatsapp] falhou ao enviar o comprovante de entrada', erro);
     return fallbackLink(dados.cliente.telefone, texto, pdf.caminho, caminhos);
   }
 }
@@ -222,6 +303,69 @@ export async function avisarPronto(
   }
 }
 
+/**
+ * Manda só as fotos e os vídeos marcados, sem documento.
+ *
+ * Serve para reenviar o que o cliente não viu, ou para mandar uma foto nova
+ * que apareceu depois — sem repetir o PDF, que o cliente já tem e que tornaria
+ * a conversa confusa com duas versões do mesmo orçamento.
+ *
+ * Vai uma linha curta antes, dizendo de que carro é: foto solta chegando sem
+ * contexto na conversa do cliente não ajuda ninguém.
+ */
+export async function enviarMidiasDaOrdem(
+  ordemId: number,
+  caminhos: CaminhosApp,
+): Promise<ResultadoEnvio> {
+  const dados = dadosDaOrdem(ordemId);
+  const texto = montarTexto(null, TEXTO_MIDIAS_AVULSAS, dados);
+
+  const quantas =
+    fotosParaOCliente(dados.ctx, ordemId).length + videosParaOCliente(dados.ctx, ordemId).length;
+  if (quantas === 0) {
+    throw new Error(
+      'Nenhuma foto ou vídeo está marcado para o cliente. Marque em "Vai ao cliente" na galeria da OS.',
+    );
+  }
+
+  if (lerEstadoWhatsApp().situacao !== 'conectado') {
+    const r = await fallbackLink(dados.cliente.telefone, texto, null, caminhos);
+    await abrirPasta(join(caminhos.midias, String(ordemId)));
+    registrar(ordemId, dados.cliente.id, 'avulsa', texto, 'fallback_link');
+    return {
+      ...r,
+      mensagem:
+        'O WhatsApp do sistema está desconectado. Abri o WhatsApp Web com a mensagem pronta e a ' +
+        'pasta das mídias desta OS — é só arrastar os arquivos para a conversa.',
+    };
+  }
+
+  try {
+    const destino = await resolverDestino(dados.cliente.telefone);
+    await filaDoWhatsApp().enfileirar(() => exigirSocket().sendMessage(destino, { text: texto }));
+
+    const midias = await enviarMidiasMarcadas(dados.ctx, ordemId, destino, caminhos);
+    const resumo = resumoDeMidias(midias.fotos, midias.videos);
+
+    registrar(ordemId, dados.cliente.id, 'avulsa', texto, 'enviada', midias.caminhos);
+    reposEventos.registrarEvento(dados.ctx, {
+      ordemId,
+      tipo: 'mensagem',
+      descricao: `Enviou ${resumo || 'as mídias'} no WhatsApp`,
+    });
+
+    log.info(`[whatsapp] mídias da OS ${dados.ordem.numero} enviadas: ${resumo || 'nenhuma'}`);
+    return {
+      status: 'enviada',
+      mensagem: resumo ? `${resumo} enviados no WhatsApp.` : 'Nenhuma mídia pôde ser enviada.',
+    };
+  } catch (erro) {
+    registrar(ordemId, dados.cliente.id, 'avulsa', texto, 'falhou', [], String(erro));
+    if (erro instanceof ErroDeDestino) throw erro;
+    return fallbackLink(dados.cliente.telefone, texto, null, caminhos);
+  }
+}
+
 /** Mensagem de teste para conferir a conexão, sem envolver nenhuma OS. */
 export async function enviarTeste(telefone: string): Promise<ResultadoEnvio> {
   const destino = await resolverDestino(telefone);
@@ -236,42 +380,75 @@ export async function enviarTeste(telefone: string): Promise<ResultadoEnvio> {
 }
 
 /**
- * Manda os vídeos marcados como "enviar ao cliente".
+ * Manda as fotos e os vídeos marcados como "enviar ao cliente".
  *
- * Cada um passa pela fila, respeitando o intervalo mínimo — mandar três vídeos
- * em rajada é exatamente o comportamento que faz o WhatsApp derrubar o número.
- * Um vídeo que falha não impede os outros nem desfaz o envio do orçamento.
+ * Fotos primeiro, vídeos depois: a foto chega rápido e já dá o contexto,
+ * enquanto o vídeo ainda está subindo.
+ *
+ * Cada mídia passa pela fila, respeitando o intervalo mínimo — mandar cinco
+ * arquivos em rajada é exatamente o comportamento que faz o WhatsApp derrubar
+ * o número. Uma mídia que falha não impede as outras nem desfaz o envio do
+ * documento: é melhor o cliente receber o orçamento com três fotos de quatro
+ * do que não receber nada.
+ *
+ * A foto vai solta mesmo já estando dentro do PDF. São usos diferentes: no
+ * documento ela é miniatura para imprimir e arquivar; solta, o cliente amplia
+ * e enxerga a peça.
  */
-async function enviarVideosMarcados(
+async function enviarMidiasMarcadas(
   ctx: ReturnType<typeof contexto>,
   ordemId: number,
   destino: string,
   caminhos: CaminhosApp,
-): Promise<string[]> {
+): Promise<{ fotos: number; videos: number; caminhos: string[] }> {
   const enviados: string[] = [];
+  let fotos = 0;
+  let videos = 0;
 
-  for (const video of videosParaOCliente(ctx, ordemId)) {
-    const caminho = join(caminhos.midias, video.arquivoPath);
+  const mandar = async (
+    midia: { id: number; arquivoPath: string; legenda: string | null },
+    tipo: 'foto' | 'video',
+  ): Promise<boolean> => {
+    const caminho = join(caminhos.midias, midia.arquivoPath);
     if (!existsSync(caminho)) {
-      log.warn(`[whatsapp] vídeo marcado não está no disco: ${caminho}`);
-      continue;
+      log.warn(`[whatsapp] ${tipo} marcada não está no disco: ${caminho}`);
+      return false;
     }
 
     try {
+      const conteudo = readFileSync(caminho);
       await filaDoWhatsApp().enfileirar(() =>
-        exigirSocket().sendMessage(destino, {
-          video: readFileSync(caminho),
-          mimetype: 'video/mp4',
-          caption: video.legenda ?? undefined,
-        }),
+        exigirSocket().sendMessage(
+          destino,
+          tipo === 'foto'
+            ? { image: conteudo, caption: midia.legenda ?? undefined }
+            : { video: conteudo, mimetype: 'video/mp4', caption: midia.legenda ?? undefined },
+        ),
       );
       enviados.push(caminho);
+      return true;
     } catch (erro) {
-      log.error(`[whatsapp] falhou ao enviar o vídeo ${video.id}`, erro);
+      log.error(`[whatsapp] falhou ao enviar ${tipo} ${midia.id}`, erro);
+      return false;
     }
+  };
+
+  for (const foto of fotosParaOCliente(ctx, ordemId)) {
+    if (await mandar(foto, 'foto')) fotos++;
+  }
+  for (const video of videosParaOCliente(ctx, ordemId)) {
+    if (await mandar(video, 'video')) videos++;
   }
 
-  return enviados;
+  return { fotos, videos, caminhos: enviados };
+}
+
+/** "2 fotos e 1 vídeo", "1 foto", ou string vazia quando não foi nada. */
+export function resumoDeMidias(fotos: number, videos: number): string {
+  const partes: string[] = [];
+  if (fotos > 0) partes.push(`${fotos} foto${fotos > 1 ? 's' : ''}`);
+  if (videos > 0) partes.push(`${videos} vídeo${videos > 1 ? 's' : ''}`);
+  return partes.join(' e ');
 }
 
 function avancarParaAguardando(ordemId: number): void {

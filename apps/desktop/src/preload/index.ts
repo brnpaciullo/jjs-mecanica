@@ -210,6 +210,9 @@ const api = {
     desconectar: () => invocar<EstadoWhatsApp>('whatsapp:desconectar'),
     teste: (telefone: string) => invocar<ResultadoEnvio>('whatsapp:teste', { telefone }),
     enviarOrcamento: (id: number) => invocar<ResultadoEnvio>('whatsapp:enviarOrcamento', { id }),
+    enviarComprovante: (id: number) =>
+      invocar<ResultadoEnvio>('whatsapp:enviarComprovante', { id }),
+    enviarMidias: (id: number) => invocar<ResultadoEnvio>('whatsapp:enviarMidias', { id }),
     avisarPronto: (id: number) => invocar<ResultadoEnvio>('whatsapp:avisarPronto', { id }),
     grupos: () => invocar<GrupoDoWhatsApp[]>('whatsapp:grupos'),
     definirGrupo: (jid: string | null, nome: string | null) =>

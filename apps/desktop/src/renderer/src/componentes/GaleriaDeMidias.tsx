@@ -1,19 +1,24 @@
 import { useState } from 'react';
-import { Loader2, Play, Send, X } from 'lucide-react';
+import { Loader2, MessageCircle, Play, Send, X } from 'lucide-react';
 import { MOMENTOS_MIDIA, ROTULO_MOMENTO, formatarDataHora, type MomentoMidia } from '@jjs/core';
 import type { MidiaNaTela } from '../../../main/midias/consultar.js';
-import { cn } from '@jjs/ui';
+import { Botao, cn } from '@jjs/ui';
 import { useConsulta } from '../hooks/useConsulta.js';
 import { Aviso } from './Aviso.js';
 import { urlDaMidia } from '../midia.js';
+import { mensagemDeErro } from '../erro.js';
 
 /**
  * Fotos e vídeos da OS, agrupados pelo momento em que foram feitos.
  *
  * O toggle "enviar ao cliente" é por mídia porque nem tudo serve para mostrar:
  * o mecânico fotografa muita coisa para registro interno, e o cliente deve ver
- * só o que explica o orçamento. Foto marcada entra no PDF; vídeo marcado vai
- * solto no WhatsApp.
+ * só o que explica o orçamento. O que está marcado vai dentro do PDF e também
+ * solto no WhatsApp, junto do documento.
+ *
+ * O botão de mandar só as mídias fica aqui, e não na barra de ações da OS,
+ * porque é aqui que a marcação acontece — e ele só aparece quando há algo
+ * marcado, senão seria um botão que só sabe dar erro.
  */
 export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
   const { dados, erro, recarregar } = useConsulta<MidiaNaTela[]>(
@@ -21,6 +26,9 @@ export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
     [ordemId],
   );
   const [aberta, setAberta] = useState<MidiaNaTela | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [recado, setRecado] = useState<string | null>(null);
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null);
 
   const midias = dados ?? [];
   if (erro) return <Aviso tom="erro">{erro}</Aviso>;
@@ -28,14 +36,54 @@ export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
 
   const marcadas = midias.filter((m) => m.incluirParaCliente).length;
 
+  async function enviarSoAsMidias() {
+    setEnviando(true);
+    setRecado(null);
+    setErroEnvio(null);
+    try {
+      const r = await window.jjs.whatsapp.enviarMidias(ordemId);
+      setRecado(r.mensagem);
+    } catch (causa) {
+      setErroEnvio(mensagemDeErro(causa));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   return (
     <section className="rounded-card border border-jjs-borda bg-jjs-branco p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-titulo text-2xl text-jjs-preto">Fotos e vídeos ({midias.length})</h2>
-        <span className="text-jjs-texto-fraco">
-          {marcadas === 0 ? 'Nenhuma marcada para o cliente' : `${marcadas} vai(ão) para o cliente`}
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-jjs-texto-fraco">
+            {marcadas === 0
+              ? 'Nenhuma marcada para o cliente'
+              : `${marcadas} vai(ão) para o cliente`}
+          </span>
+          {marcadas > 0 ? (
+            <Botao
+              variante="secundario"
+              icone={<MessageCircle size={18} />}
+              disabled={enviando}
+              onClick={() => void enviarSoAsMidias()}
+              title="Manda só as mídias marcadas, sem repetir o PDF."
+            >
+              {enviando ? 'Enviando...' : 'Enviar só as mídias'}
+            </Botao>
+          ) : null}
+        </div>
       </div>
+
+      {erroEnvio ? (
+        <div className="mt-3">
+          <Aviso tom="erro">{erroEnvio}</Aviso>
+        </div>
+      ) : null}
+      {recado ? (
+        <div className="mt-3">
+          <Aviso tom="ok">{recado}</Aviso>
+        </div>
+      ) : null}
 
       {MOMENTOS_MIDIA.map((momento) => {
         const doMomento = midias.filter((m) => m.momento === momento);

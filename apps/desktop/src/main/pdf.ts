@@ -85,6 +85,8 @@ export function montarDadosPdf(ordemId: number, caminhos: CaminhosApp): DadosPdf
       validadeAte: ordem.validadeAte,
       formaPagamento: ordem.formaPagamento,
       kmEntrada: ordem.kmEntrada,
+      combustivel: ordem.combustivel,
+      checklistEntrada: ordem.checklistEntrada,
       descontoCentavos: ordem.descontoCentavos,
     },
     cliente: { nome: cliente.nome, telefone: cliente.telefone },

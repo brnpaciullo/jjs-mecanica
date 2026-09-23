@@ -10,6 +10,13 @@ export const TEMPLATE_ORCAMENTO_PADRAO =
   'Valor total: {total}\n\n' +
   'Qualquer dúvida é só chamar aqui. Abraço, JJS Mecânica.';
 
+export const TEMPLATE_RECEBIMENTO_PADRAO =
+  'Olá {cliente}, tudo bem?\n\n' +
+  'Recebemos a {veiculo} placa {placa} aqui na oficina (OS {numero_os}).\n' +
+  'Segue o comprovante de entrada com o que foi registrado na chegada.\n\n' +
+  'Assim que terminarmos o diagnóstico, mandamos o orçamento para você aprovar ' +
+  'antes de qualquer serviço. JJS Mecânica.';
+
 export const TEMPLATE_PRONTO_PADRAO =
   'Olá {cliente}! A {veiculo} placa {placa} está pronta para retirada.\n\n' +
   'Estamos à disposição no horário de funcionamento. JJS Mecânica.';
@@ -32,6 +39,7 @@ export function semear(db: BancoJjs): void {
       mensagemRodapePdf: 'Obrigado pela preferência!',
       templateMsgOrcamento: TEMPLATE_ORCAMENTO_PADRAO,
       templateMsgPronto: TEMPLATE_PRONTO_PADRAO,
+      templateMsgRecebimento: TEMPLATE_RECEBIMENTO_PADRAO,
     })
     .onConflictDoNothing()
     .run();

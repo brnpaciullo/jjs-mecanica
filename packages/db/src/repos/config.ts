@@ -28,6 +28,7 @@ export type ConfigEditavel = Partial<
     | 'economizarTinta'
     | 'templateMsgOrcamento'
     | 'templateMsgPronto'
+    | 'templateMsgRecebimento'
     | 'whatsappGrupoJid'
     | 'whatsappGrupoNome'
   >

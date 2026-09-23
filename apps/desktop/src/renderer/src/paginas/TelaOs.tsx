@@ -120,7 +120,9 @@ export function TelaOs() {
       const r =
         ordem.status === 'pronto'
           ? await window.jjs.whatsapp.avisarPronto(ordemId)
-          : await window.jjs.whatsapp.enviarOrcamento(ordemId);
+          : naRecepcao
+            ? await window.jjs.whatsapp.enviarComprovante(ordemId)
+            : await window.jjs.whatsapp.enviarOrcamento(ordemId);
       setRecado(r.mensagem);
       setErroAcao(null);
       consulta.recarregar();
@@ -131,10 +133,17 @@ export function TelaOs() {
     }
   }
 
-  // Antes da aprovação o documento é "Orçamento"; depois vira "Ordem de Serviço".
-  const documento = ['aprovado', 'em_servico', 'pronto', 'entregue'].includes(ordem.status)
-    ? 'Ordem de Serviço'
-    : 'Orçamento';
+  /**
+   * Enquanto o carro está sendo recebido e diagnosticado não existe preço
+   * ainda: o documento é o comprovante de entrada. Mandar o orçamento aqui
+   * seria mandar uma tabela vazia com total R$ 0,00.
+   */
+  const naRecepcao = ordem.status === 'recepcao' || ordem.status === 'diagnostico';
+  const documento = naRecepcao
+    ? 'Comprovante de Entrada'
+    : ['aprovado', 'em_servico', 'pronto', 'entregue'].includes(ordem.status)
+      ? 'Ordem de Serviço'
+      : 'Orçamento';
 
   const seguinte = proximoStatus(ordem.status);
   const vencido = estaVencido(ordem.validadeAte);
@@ -282,7 +291,9 @@ export function TelaOs() {
               ? 'Enviando...'
               : ordem.status === 'pronto'
                 ? 'Avisar cliente no WhatsApp'
-                : 'Enviar no WhatsApp'}
+                : naRecepcao
+                  ? 'Enviar comprovante de entrada'
+                  : 'Enviar orçamento no WhatsApp'}
           </Botao>
           {seguinte ? (
             <Botao

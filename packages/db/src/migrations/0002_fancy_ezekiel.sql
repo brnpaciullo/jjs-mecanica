@@ -1,0 +1,1 @@
+ALTER TABLE `oficina_config` ADD `template_msg_recebimento` text;

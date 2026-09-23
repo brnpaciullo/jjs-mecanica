@@ -23,15 +23,35 @@ function esc(texto: unknown): string {
 }
 
 /**
- * Antes da aprovação o documento é um **Orçamento** e mostra tudo, inclusive o
- * que o cliente ainda não aprovou (riscado), para a conversa ser sobre a lista
+ * Enquanto o carro está sendo recebido e diagnosticado, o documento é um
+ * **Comprovante de Entrada**: registra o estado do carro na chegada e não fala
+ * de dinheiro. Mandar um orçamento aqui seria mandar uma tabela vazia com
+ * total R$ 0,00, que o cliente lê como "de graça".
+ *
+ * Depois, o documento é um **Orçamento** e mostra tudo, inclusive o que o
+ * cliente ainda não aprovou (riscado), para a conversa ser sobre a lista
  * inteira. Depois de aprovado vira **Ordem de Serviço** e só os itens
  * aprovados aparecem — é o que vai ser executado e cobrado.
  */
 export function variacaoPara(status: DadosPdf['ordem']['status']): VariacaoPdf {
+  if (status === 'recepcao' || status === 'diagnostico') return 'recibo_entrada';
+
   const jaAprovado = ['aprovado', 'em_servico', 'pronto', 'entregue'];
   return jaAprovado.includes(status) ? 'ordem_servico' : 'orcamento';
 }
+
+export const TITULO_VARIACAO: Record<VariacaoPdf, string> = {
+  recibo_entrada: 'Comprovante de Entrada',
+  orcamento: 'Orçamento',
+  ordem_servico: 'Ordem de Serviço',
+};
+
+/** Prefixo do nome do arquivo, para as três variações não se sobrescreverem. */
+const PREFIXO_ARQUIVO: Record<VariacaoPdf, string> = {
+  recibo_entrada: 'Entrada',
+  orcamento: 'Orcamento',
+  ordem_servico: 'OS',
+};
 
 function tabelaDeItens(itens: ItemPdf[], tipo: TipoItem): string {
   const doTipo = itens.filter((i) => i.tipo === tipo);
@@ -82,7 +102,7 @@ function via(dados: DadosPdf, variacao: VariacaoPdf): string {
   const itens = variacao === 'ordem_servico' ? dados.itens.filter((i) => i.aprovado) : dados.itens;
 
   const totais = calcularTotais(dados.itens, ordem.descontoCentavos);
-  const titulo = variacao === 'ordem_servico' ? 'Ordem de Serviço' : 'Orçamento';
+  const titulo = TITULO_VARIACAO[variacao];
 
   const contato = [oficina.endereco, oficina.telefone, oficina.cnpj ? `CNPJ ${oficina.cnpj}` : null]
     .filter(Boolean)
@@ -122,6 +142,42 @@ function via(dados: DadosPdf, variacao: VariacaoPdf): string {
 
   const garantia = oficina.textoGarantia
     ? `<div class="bloco garantia"><h2>Garantia</h2>${esc(oficina.textoGarantia)}</div>`
+    : '';
+
+  const ehRecibo = variacao === 'recibo_entrada';
+
+  // Lista só sai no papel se tiver algo: um "Avarias: —" vazio ocupa espaço na
+  // A5 e ainda sugere que ninguém olhou o carro.
+  const lista = (rotulo: string, itens: string[]) =>
+    itens.length > 0
+      ? `<div><dt>${rotulo}</dt><dd>${itens.map(esc).join(' · ')}</dd></div>`
+      : '';
+
+  const checklist = ordem.checklistEntrada;
+  const estadoNaEntrada = ehRecibo
+    ? `<div class="bloco">
+         <h2>Estado do carro na entrada</h2>
+         <dl class="condicoes">
+           <div><dt>Combustível</dt><dd>${esc(ordem.combustivel ?? '—')}</dd></div>
+           ${lista('Avarias', checklist?.avarias ?? [])}
+           ${lista('Objetos no carro', checklist?.objetos ?? [])}
+         </dl>
+         ${
+           checklist?.observacoes
+             ? `<div class="texto-livre">${esc(checklist.observacoes)}</div>`
+             : ''
+         }
+       </div>`
+    : '';
+
+  // Sem isto o cliente pode ler o comprovante como preço fechado — ele tem o
+  // logo da oficina, o número da OS e uma assinatura embaixo.
+  const avisoSemValores = ehRecibo
+    ? `<div class="bloco garantia">
+         Este documento confirma a entrada do veículo na oficina e não é um
+         orçamento. Os valores serão informados após o diagnóstico, para sua
+         aprovação, antes de qualquer serviço ser executado.
+       </div>`
     : '';
 
   return `
@@ -165,10 +221,10 @@ function via(dados: DadosPdf, variacao: VariacaoPdf): string {
       ${diagnostico}
     </div>
 
-    ${tabelaDeItens(itens, 'peca')}
-    ${tabelaDeItens(itens, 'mao_de_obra')}
+    ${ehRecibo ? estadoNaEntrada : tabelaDeItens(itens, 'peca')}
+    ${ehRecibo ? avisoSemValores : tabelaDeItens(itens, 'mao_de_obra')}
 
-    <div class="bloco fechamento">
+    ${ehRecibo ? '' : `<div class="bloco fechamento">
       <dl class="condicoes">
         <div><dt>Prazo</dt><dd>${esc(ordem.prazoEstimado ?? 'a combinar')}</dd></div>
         <div><dt>Validade</dt><dd>${ordem.validadeAte ? formatarData(ordem.validadeAte) : '—'}</dd></div>
@@ -180,10 +236,10 @@ function via(dados: DadosPdf, variacao: VariacaoPdf): string {
         ${desconto}
         <div class="total"><span>TOTAL</span><span class="total-valor">${formatarDinheiro(totais.totalCentavos)}</span></div>
       </div>
-    </div>
+    </div>`}
 
-    ${garantia}
-    ${fotos}
+    ${ehRecibo ? '' : garantia}
+    ${ehRecibo ? '' : fotos}
 
     <div class="assinatura">
       <div>Assinatura do cliente</div>
@@ -201,7 +257,7 @@ function via(dados: DadosPdf, variacao: VariacaoPdf): string {
 export function gerarHtml(dados: DadosPdf, opcoes: OpcoesPdf = {}): ResultadoTemplate {
   const variacao = opcoes.variacao ?? variacaoPara(dados.ordem.status);
   const duasVias = opcoes.duasViasEmA4 === true;
-  const titulo = variacao === 'ordem_servico' ? 'Ordem de Serviço' : 'Orçamento';
+  const titulo = TITULO_VARIACAO[variacao];
   const totais = calcularTotais(dados.itens, dados.ordem.descontoCentavos);
 
   const corpo = duasVias
@@ -218,7 +274,7 @@ export function gerarHtml(dados: DadosPdf, opcoes: OpcoesPdf = {}): ResultadoTem
 <body>${corpo}</body>
 </html>`;
 
-  const prefixo = variacao === 'ordem_servico' ? 'OS' : 'Orcamento';
+  const prefixo = PREFIXO_ARQUIVO[variacao];
   const numero = String(dados.ordem.numero).padStart(4, '0');
   const nomeArquivo = `${prefixo}-OS${numero}-${dados.veiculo.placa}.pdf`;
 

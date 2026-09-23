@@ -33,6 +33,12 @@ const dados = (p: Partial<DadosPdf> = {}): DadosPdf => ({
     validadeAte: new Date(2026, 8, 29, 10, 0).toISOString(),
     formaPagamento: null,
     kmEntrada: 87000,
+    combustivel: '1/2',
+    checklistEntrada: {
+      avarias: ['Risco na porta direita', 'Para-choque traseiro amassado'],
+      objetos: ['Estepe', 'Macaco'],
+      observacoes: 'Cliente pediu para não mexer no som.',
+    },
     descontoCentavos: 0,
   },
   cliente: { nome: 'Maria Souza', telefone: '5541999887766' },
@@ -46,9 +52,14 @@ const dados = (p: Partial<DadosPdf> = {}): DadosPdf => ({
 });
 
 describe('variacaoPara', () => {
-  it('antes da aprovação é Orçamento', () => {
-    expect(variacaoPara('recepcao')).toBe('orcamento');
-    expect(variacaoPara('diagnostico')).toBe('orcamento');
+  it('enquanto o carro está sendo recebido é Comprovante de Entrada', () => {
+    // Antes disto saía "Orçamento" com a tabela vazia e total R$ 0,00 — que o
+    // cliente lê como "de graça".
+    expect(variacaoPara('recepcao')).toBe('recibo_entrada');
+    expect(variacaoPara('diagnostico')).toBe('recibo_entrada');
+  });
+
+  it('com o orçamento na rua é Orçamento', () => {
     expect(variacaoPara('orcamento_enviado')).toBe('orcamento');
     expect(variacaoPara('recusado')).toBe('orcamento');
   });
@@ -195,5 +206,56 @@ describe('segurança do HTML', () => {
     );
     expect(r.html).toContain('Sousa &amp; Filhos &lt;oficina&gt;');
     expect(r.html).not.toContain('<oficina>');
+  });
+});
+
+describe('o comprovante de entrada não fala de dinheiro', () => {
+  const recibo = () => gerarHtml(dados({ ordem: { ...dados().ordem, status: 'recepcao' } }));
+
+  it('se chama Comprovante de Entrada e o arquivo sai com outro nome', () => {
+    const r = recibo();
+    expect(r.variacao).toBe('recibo_entrada');
+    expect(r.titulo).toBe('Comprovante de Entrada');
+    expect(r.nomeArquivo).toBe('Entrada-OS0042-ABC1234.pdf');
+  });
+
+  it('não mostra preço nenhum — nem item, nem total', () => {
+    const { html } = recibo();
+    expect(html).not.toContain('TOTAL');
+    expect(html).not.toContain('Troca de pastilhas');
+    expect(html).not.toContain('Mão de obra');
+    expect(html).not.toMatch(/R\$/);
+  });
+
+  it('registra o estado do carro na chegada, que é para o que ele serve', () => {
+    const { html } = recibo();
+    expect(html).toContain('Barulho na frente quando freia.');
+    expect(html).toContain('87.000');
+    expect(html).toContain('1/2');
+    expect(html).toContain('Risco na porta direita');
+    expect(html).toContain('Estepe');
+    expect(html).toContain('Cliente pediu para não mexer no som.');
+  });
+
+  it('avisa que não é orçamento, para não ser lido como preço fechado', () => {
+    expect(recibo().html).toContain('não é um');
+  });
+
+  it('mantém a linha de assinatura: é o que vale numa discussão sobre avaria', () => {
+    expect(recibo().html).toContain('Assinatura do cliente');
+  });
+
+  it('omite lista vazia em vez de imprimir um travessão', () => {
+    const semNada = gerarHtml(
+      dados({
+        ordem: {
+          ...dados().ordem,
+          status: 'recepcao',
+          checklistEntrada: { avarias: [], objetos: [], observacoes: '' },
+        },
+      }),
+    );
+    expect(semNada.html).not.toContain('Avarias');
+    expect(semNada.html).not.toContain('Objetos no carro');
   });
 });

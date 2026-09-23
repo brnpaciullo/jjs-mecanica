@@ -60,6 +60,9 @@ async function main() {
     veiculoId: carro.id,
     queixas: 'Barulho no freio',
   });
+  // A OS nasce em 'recepcao', onde o documento é o comprovante de entrada, que
+  // não leva fotos. O ciclo conferido aqui é o do orçamento.
+  reposOrdens.mudarStatus(ctx, os.id, 'orcamento_enviado');
   reposItens.adicionarItem(ctx, os.id, {
     tipo: 'peca',
     descricao: 'Pastilha',
