@@ -11,13 +11,19 @@ import { encerrarWhatsApp, iniciarWhatsApp } from './whatsapp/conexao.js';
 
 /**
  * Fixa o nome antes de qualquer app.getPath('userData').
+ *
  * Sem isto o Electron monta a pasta de dados a partir do nome do pacote, e ela
- * sai como "@jjs/desktop" em dev e "JJS Mecanica" empacotado: dois lugares
- * diferentes, um deles com espaco e acento no caminho do Windows. Com o nome
- * fixo, dev e producao apontam para %APPDATA%\jjs-mecanica (ou
- * ~/.config/jjs-mecanica no Linux), que e o que o README documenta.
+ * sairia como "@jjs/desktop" em dev e "JJS Mecanica" empacotado: dois lugares
+ * diferentes, um deles com espaco e acento no caminho do Windows.
+ *
+ * **Dev e producao usam pastas separadas de proposito.** Quando os dois
+ * compartilhavam a mesma pasta, rodar `npm run dev` na maquina de quem
+ * desenvolve mexia no banco real e na sessao do WhatsApp da oficina: um teste
+ * de migracao podia corromper dados de cliente, e testar "desconectar" tirava
+ * o numero da oficina do ar. O app instalado fica em jjs-mecanica; o de
+ * desenvolvimento, em jjs-mecanica-dev.
  */
-app.setName('jjs-mecanica');
+app.setName(app.isPackaged ? 'jjs-mecanica' : 'jjs-mecanica-dev');
 
 /**
  * Instancia unica. Duas copias abertas no mesmo notebook brigariam pelo banco,
