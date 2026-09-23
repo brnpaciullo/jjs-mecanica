@@ -1,0 +1,37 @@
+# Dependências e saídas de build
+node_modules/
+dist/
+out/
+release/
+.vite/
+*.tsbuildinfo
+.eslintcache
+
+# Bundles temporários dos scripts de verificação
+.*.cjs
+
+# Logs
+*.log
+logs/
+
+# Dados da oficina — nunca versionar.
+# Em produção isto vive em %APPDATA%\jjs-mecanica, fora do projeto. As regras
+# abaixo existem para o caso de alguém copiar um banco ou uma sessão para cá
+# durante um teste: são dados de cliente e a credencial do WhatsApp.
+*.db
+*.db-wal
+*.db-shm
+whatsapp-session/
+creds.json
+midias/
+backups/
+pdfs/
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Sistema
+.DS_Store
+Thumbs.db

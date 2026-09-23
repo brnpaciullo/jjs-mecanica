@@ -1,0 +1,20 @@
+export * from './contexto.js';
+export * as reposClientes from './clientes.js';
+export * as reposVeiculos from './veiculos.js';
+export * as reposCatalogo from './catalogo.js';
+export * as reposConfig from './config.js';
+export * as reposUsuarios from './usuarios.js';
+export * as reposOrdens from './ordens.js';
+export * as reposItens from './itens.js';
+export * as reposEventos from './eventos.js';
+export * as reposBusca from './busca.js';
+
+export type { ClienteRegistro } from './clientes.js';
+export type { VeiculoRegistro, VeiculoComDono } from './veiculos.js';
+export type { CatalogoRegistro } from './catalogo.js';
+export type { ConfigRegistro, ConfigEditavel } from './config.js';
+export type { UsuarioRegistro } from './usuarios.js';
+export type { OrdemRegistro, OrdemNaLista, OrdemEditavel, FiltroHistorico } from './ordens.js';
+export type { ItemRegistro, ItemEditavel } from './itens.js';
+export type { EventoRegistro, EventoNaTela } from './eventos.js';
+export type { ResultadoBusca } from './busca.js';

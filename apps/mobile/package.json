@@ -1,0 +1,13 @@
+{
+  "name": "@jjs/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jjs/core": "*",
+    "@jjs/ui": "*"
+  }
+}

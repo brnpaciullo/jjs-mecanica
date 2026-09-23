@@ -1,0 +1,25 @@
+{
+  "name": "@jjs/ui",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css",
+    "./fontes": "./src/fontes.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fontsource/barlow": "5.3.0",
+    "@fontsource/barlow-condensed": "5.3.0",
+    "@jjs/core": "*",
+    "lucide-react": "1.47.0"
+  },
+  "peerDependencies": {
+    "react": "19.3.0"
+  }
+}

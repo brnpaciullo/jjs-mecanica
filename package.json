@@ -1,0 +1,45 @@
+{
+  "name": "jjs-mecanica",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Sistema de gestao da JJS Oficina Mecanica",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @jjs/desktop",
+    "db:gerar": "npm run gerar --workspace @jjs/db",
+    "dev": "npm run dev --workspace @jjs/desktop",
+    "dev:web": "npm run dev:web --workspace @jjs/desktop",
+    "formatar": "prettier --write .",
+    "lint": "eslint .",
+    "lint:corrigir": "eslint . --fix",
+    "postinstall": "install-electron",
+    "rebuild:nativos": "npm run rebuild:nativos --workspace @jjs/desktop",
+    "test": "vitest run",
+    "test:observar": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "verificar:fluxo": "node scripts/verificar-fluxo.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.6",
+    "electron": "44.4.4",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.25.11",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^30.1.1",
+    "prettier": "^3.9.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "5.0.1"
+  }
+}

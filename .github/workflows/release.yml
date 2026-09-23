@@ -1,0 +1,50 @@
+name: Release Windows
+
+# Dispara ao empurrar uma tag: git tag v0.0.1 && git push origin v0.0.1
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  windows:
+    name: Instalador NSIS
+    # Obrigatoriamente windows-latest: better-sqlite3 (e depois sharp e
+    # ffmpeg-static) são nativos e baixam/compilam binários da plataforma em
+    # que o npm install roda. Build cruzado no Linux empacotaria binários de
+    # Linux dentro do .exe.
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testes
+        run: npm test
+
+      - name: Checagem de tipos
+        run: npm run typecheck
+
+      - name: Gerar instalador e publicar no GitHub Releases
+        run: npm run publicar:win --workspace @jjs/desktop
+        env:
+          # Token automático do Actions: publica no release desta mesma tag.
+          # É daqui que o electron-updater vai ler a nova versão.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Guardar o instalador como artefato do build
+        uses: actions/upload-artifact@v4
+        with:
+          name: instalador-windows
+          path: apps/desktop/release/*.exe
+          if-no-files-found: error

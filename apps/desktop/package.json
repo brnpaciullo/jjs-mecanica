@@ -1,0 +1,42 @@
+{
+  "name": "@jjs/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "description": "JJS Mecânica - aplicativo do balcão",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "build": "electron-vite build",
+    "dev": "electron-vite dev",
+    "dev:web": "vite --config vite.renderer.config.ts",
+    "empacotar:win": "npm run build && electron-builder --win nsis",
+    "previa": "electron-vite preview",
+    "publicar:win": "npm run build && electron-builder --win nsis --publish always",
+    "rebuild:nativos": "electron-builder install-app-deps",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jjs/core": "*",
+    "@jjs/db": "*",
+    "@jjs/pdf": "*",
+    "@jjs/ui": "*",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "better-sqlite3": "13.0.3",
+    "electron-log": "5.4.4",
+    "electron-updater": "6.8.9",
+    "qrcode": "^1.5.4",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron-vite": "5.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "^7.18.4",
+    "tailwindcss": "4.3.3",
+    "vite": "^7.3.6"
+  }
+}

@@ -1,0 +1,58 @@
+appId: br.com.jjsmecanica.gestao
+productName: JJS Mecânica
+copyright: JJS Oficina Mecânica
+
+directories:
+  buildResources: recursos
+  output: release
+
+files:
+  - out/**
+  - package.json
+  # Lidos em tempo de execucao a partir de recursos/, tanto em dev quanto de
+  # dentro do asar. Sem os icones o app abre sem imagem na bandeja; sem as
+  # fontes o orcamento impresso sai na fonte padrao do sistema.
+  - recursos/*.png
+  - recursos/fontes/*.woff2
+  - '!**/*.map'
+
+# O migrator do Drizzle le a pasta do disco, e o asar nao serve como pasta.
+# Por isso as migrations saem do bundle e vao para resources/migrations.
+extraResources:
+  - from: ../../packages/db/src/migrations
+    to: migrations
+    filter:
+      - '**/*'
+
+asar: true
+asarUnpack:
+  - '**/*.node'
+  - '**/node_modules/better-sqlite3/**'
+
+npmRebuild: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: JJS-Mecanica-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: JJS Mecânica
+  deleteAppDataOnUninstall: false
+  # A porta 4570 precisa estar liberada para o celular do mecanico conectar.
+  # A regra so entra de verdade na etapa 6; o include fica preparado aqui.
+  include: recursos/instalador.nsh
+
+# O electron-updater le exatamente daqui para achar a nova versao.
+# Repositorio publico: nao e preciso token embutido no app.
+publish:
+  provider: github
+  owner: brnpaciullo
+  repo: jjs-mecanica

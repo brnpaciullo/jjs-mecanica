@@ -1,0 +1,76 @@
+/*
+ * Identidade da JJS, tirada da fachada: preto com amarelo.
+ * A area de trabalho e clara (leitura longa); o preto fica na lateral e nos
+ * cabecalhos, como na fachada.
+ *
+ * Tailwind v4 e CSS-first: o que esta em @theme vira utilitario
+ * (bg-jjs-amarelo, text-jjs-preto, font-titulo, rounded-campo...).
+ */
+
+@source "./";
+
+@theme {
+  /* Paleta */
+  --color-jjs-preto: #15171b;
+  --color-jjs-grafite: #2a2d33;
+  --color-jjs-amarelo: #f2b705;
+  --color-jjs-amarelo-escuro: #c99500;
+  --color-jjs-papel: #f5f5f2;
+  --color-jjs-branco: #ffffff;
+  --color-jjs-verde: #2e8b57;
+  --color-jjs-vermelho: #c8372d;
+
+  /* Cinzas derivados, para borda e texto secundario sobre o papel */
+  --color-jjs-borda: #dedcd6;
+  --color-jjs-texto-fraco: #6b6f76;
+
+  /* Tipografia: Barlow Condensed nos titulos e numeros grandes (ecoa o "JJS"
+     da fachada), Barlow no corpo. Fontes empacotadas, o app roda offline. */
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+  --font-titulo: 'Barlow Condensed', 'Barlow', ui-sans-serif, sans-serif;
+
+  /* Corpo com no minimo 16px no desktop */
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+
+  /* Cantos pequenos: 6px em input e botao, 8px no card do quadro */
+  --radius-campo: 6px;
+  --radius-card: 8px;
+
+  /* Alvo de toque minimo */
+  --spacing-toque: 48px;
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-jjs-papel);
+    color: var(--color-jjs-preto);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-titulo);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  /* Foco sempre visivel: quem usa o sistema navega muito no teclado */
+  :focus-visible {
+    outline: 2px solid var(--color-jjs-amarelo-escuro);
+    outline-offset: 2px;
+  }
+
+  /* Nada de spinner nos campos de numero: atrapalha no toque */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+}
