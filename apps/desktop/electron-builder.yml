@@ -56,3 +56,8 @@ publish:
   provider: github
   owner: brnpaciullo
   repo: jjs-mecanica
+  # O padrao do electron-builder e criar o release como RASCUNHO, e rascunho
+  # nao aparece para o electron-updater: a oficina nunca receberia a
+  # atualizacao, sem nenhum erro visivel. Publicar direto faz o comportamento
+  # bater com o que a tag promete.
+  releaseType: release

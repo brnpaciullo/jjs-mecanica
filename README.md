@@ -254,9 +254,16 @@ O workflow `Release Windows` roda sozinho em `windows-latest`, gera o
 `JJS-Mecanica-Setup-0.0.2.exe` e publica no GitHub Releases. O `GITHUB_TOKEN` do
 próprio Actions basta — não precisa criar token nenhum.
 
-> A versão no `package.json` e a tag precisam bater. O `electron-updater`
+> **A versão no `package.json` e a tag precisam bater.** O `electron-updater`
 > compara a versão instalada com a do release: se a tag for `v0.0.2` mas o
 > `package.json` ainda disser `0.0.1`, o app nunca vê a atualização.
+
+> **Rascunho não vale.** O `electron-builder` cria o release como rascunho por
+> padrão, e rascunho é invisível para o `electron-updater` — a oficina nunca
+> receberia a atualização, e sem erro nenhum na tela. Por isso o
+> `electron-builder.yml` fixa `releaseType: release`. Se um release aparecer
+> como _Draft_ no GitHub, ele precisa ser publicado na mão para o auto-update
+> enxergar.
 
 ### Nunca gere o instalador no Linux
 
