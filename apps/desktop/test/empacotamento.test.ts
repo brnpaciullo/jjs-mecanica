@@ -29,13 +29,27 @@ describe('o instalador leva tudo que o app precisa em produção', () => {
     expect(ordemMobile, 'o app do celular precisa vir antes').toBeLessThan(ordemDesktop);
   });
 
-  it('empacotar e publicar não constroem — quem constrói é a raiz', () => {
+  it('empacotar não constrói — quem constrói é a raiz', () => {
     const desktop = scripts('apps/desktop/package.json');
-    for (const nome of ['empacotar:win', 'publicar:win']) {
-      expect(desktop[nome], `${nome} não pode chamar o build do próprio workspace`).not.toContain(
-        'npm run build',
-      );
-    }
+    expect(
+      desktop['empacotar:win'],
+      'empacotar:win não pode chamar o build do próprio workspace',
+    ).not.toContain('npm run build');
+  });
+
+  it('a publicação usa o gh, não o electron-builder', () => {
+    const fluxo = readFileSync(join(raiz, '.github/workflows/release.yml'), 'utf8');
+    expect(fluxo).toContain('gh release upload');
+    expect(
+      fluxo,
+      'o electron-builder já relatou sucesso deixando o release incompleto',
+    ).not.toContain('--publish always');
+  });
+
+  it('a conferência exige upload concluído e download real', () => {
+    const fluxo = readFileSync(join(raiz, '.github/workflows/release.yml'), 'utf8');
+    expect(fluxo, 'checar só o nome do anexo não basta').toContain('uploaded');
+    expect(fluxo, 'a prova é o arquivo baixar').toContain('HTTP $codigo');
   });
 
   it('o workflow constrói pela raiz e confere o resultado', () => {

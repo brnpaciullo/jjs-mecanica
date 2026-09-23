@@ -84,32 +84,14 @@ jobs:
           path: apps/desktop/release/*.exe
           if-no-files-found: error
 
+      # A publicação é feita pelo `gh`, não pelo electron-builder.
+      #
+      # O electron-builder relatou sucesso três vezes deixando o release
+      # incompleto: ele considera o upload feito quando termina de mandar os
+      # bytes, mas o GitHub ainda precisa confirmar. Um anexo que não completa
+      # fica com o nome lá e some depois — foi assim que a v0.0.5 saiu com
+      # apenas o .blockmap, com o job todo verde.
       - name: Publicar no GitHub Releases
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # O upload de um arquivo grande falha de vez em quando por rede.
-          # Tentar de novo é bem melhor que deixar um release pela metade.
-          for tentativa in 1 2 3; do
-            echo "::group::Publicação — tentativa $tentativa"
-            if npm run publicar:win --workspace @jjs/desktop; then
-              echo "::endgroup::"
-              exit 0
-            fi
-            echo "::endgroup::"
-            echo "Tentativa $tentativa falhou; esperando antes de repetir."
-            sleep 20
-          done
-          echo "As três tentativas de publicação falharam."
-          exit 1
-
-      # Esta etapa existe porque já falhamos de três jeitos diferentes:
-      # release publicado sem o .exe, build publicando cedo demais, e release
-      # que simplesmente não aparece. Em vez de só conferir, ela **conserta**:
-      # promove rascunho para publicado e, se faltar anexo, sobe o arquivo que
-      # já está no disco. O `gh` vem pronto no runner.
-      - name: Conferir e consertar o release
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -119,50 +101,72 @@ jobs:
           pasta="apps/desktop/release"
 
           echo "Arquivos gerados:"
-          ls -la "$pasta" || true
+          ls -la "$pasta"
 
-          # /releases/tags/ NÃO encontra rascunho, nem autenticado. Por isso a
-          # busca é na lista completa, que com token inclui os rascunhos.
-          achar() {
-            gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              --jq ".[] | select(.tag_name==\"$tag\") | {id, draft, assets: [.assets[].name]}" 2>/dev/null
+          exe=$(ls "$pasta"/*.exe 2>/dev/null | head -1)
+          test -n "$exe" || { echo "::error::Instalador .exe não encontrado."; exit 1; }
+          test -f "$pasta/latest.yml" || {
+            echo "::error::latest.yml não foi gerado — o auto-update não funcionaria."
+            exit 1
           }
 
-          info=$(achar)
-          echo "Release encontrado: ${info:-nenhum}"
+          gh release view "$tag" >/dev/null 2>&1 \
+            || gh release create "$tag" --title "$tag" --notes "Versão $tag"
 
-          if [ -z "$info" ]; then
-            echo "Nenhum release para $tag. Criando com os arquivos do disco."
-            gh release create "$tag" --title "$tag" --notes "Versão $tag" \
-              "$pasta"/*.exe "$pasta"/latest.yml "$pasta"/*.blockmap
-            info=$(achar)
-          fi
-
-          id=$(echo "$info" | jq -r .id)
-          rascunho=$(echo "$info" | jq -r .draft)
-
-          if [ "$rascunho" = "true" ]; then
-            echo "Estava como rascunho — publicando, senão o auto-update não enxerga."
-            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/$id" -f draft=false >/dev/null
-          fi
-
-          # Garante os dois anexos que importam: o instalador e o manifesto do
-          # auto-update. --clobber substitui o que estiver pela metade.
-          for arquivo in "$pasta"/*.exe "$pasta"/latest.yml; do
+          # Sobe um anexo e só aceita quando o GitHub confirma o recebimento.
+          subir() {
+            arquivo="$1"
             nome=$(basename "$arquivo")
-            if ! echo "$info" | jq -e --arg n "$nome" '.assets | index($n)' >/dev/null; then
-              echo "Faltava $nome — enviando."
-              gh release upload "$tag" "$arquivo" --clobber
-            fi
+
+            for tentativa in 1 2 3; do
+              echo "::group::$nome — tentativa $tentativa"
+              gh release upload "$tag" "$arquivo" --clobber || true
+
+              estado=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" \
+                --jq ".assets[] | select(.name==\"$nome\") | .state" 2>/dev/null || true)
+              echo "estado no GitHub: ${estado:-ausente}"
+              echo "::endgroup::"
+
+              [ "$estado" = "uploaded" ] && return 0
+              sleep 15
+            done
+            return 1
+          }
+
+          for arquivo in "$exe" "$pasta/latest.yml" "$pasta"/*.blockmap; do
+            [ -f "$arquivo" ] || continue
+            subir "$arquivo" || {
+              echo "::error::Falhou ao enviar $(basename "$arquivo") depois de 3 tentativas."
+              exit 1
+            }
           done
 
-          final=$(achar)
-          echo "Estado final: $final"
-          echo "$final" | jq -e '.draft == false' >/dev/null \
-            || { echo "O release continua como rascunho."; exit 1; }
-          echo "$final" | jq -e '.assets | map(select(endswith(".exe"))) | length > 0' >/dev/null \
-            || { echo "O release está sem o instalador."; exit 1; }
-          echo "$final" | jq -e '.assets | index("latest.yml")' >/dev/null \
-            || { echo "O release está sem o latest.yml — o auto-update não funcionaria."; exit 1; }
+          echo "EXE_NOME=$(basename "$exe")" >> "$GITHUB_ENV"
 
-          echo "Release $tag publicado, com instalador e latest.yml."
+      # A prova final não é a API dizer que está lá, e sim o arquivo baixar.
+      # É isso que a oficina vai fazer.
+      - name: Conferir que o instalador realmente baixa
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          tag="${GITHUB_REF_NAME}"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}"
+
+          for nome in "$EXE_NOME" latest.yml; do
+            codigo=$(curl -sIL -o /dev/null -w "%{http_code}" --max-time 120 "$base/$nome")
+            echo "$nome -> HTTP $codigo"
+            [ "$codigo" = "200" ] || {
+              echo "::error::$nome não está baixável no release $tag."
+              exit 1
+            }
+          done
+
+          rascunho=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" --jq .draft)
+          [ "$rascunho" = "false" ] || {
+            echo "::error::O release $tag ficou como rascunho — o auto-update não o enxerga."
+            exit 1
+          }
+
+          echo "Release $tag publicado, com instalador e latest.yml baixáveis."

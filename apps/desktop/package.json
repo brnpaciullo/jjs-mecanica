@@ -10,7 +10,6 @@
     "dev:web": "vite --config vite.renderer.config.ts",
     "empacotar:win": "electron-builder --win nsis --publish never",
     "previa": "electron-vite preview",
-    "publicar:win": "electron-builder --win nsis --publish always",
     "rebuild:nativos": "electron-builder install-app-deps",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
