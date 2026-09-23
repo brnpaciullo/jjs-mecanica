@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, dialog } from 'electron';
 import { z } from 'zod';
 import {
   reposBusca,
@@ -25,6 +25,16 @@ import {
 } from '../whatsapp/conexao.js';
 import { avisarPronto, enviarOrcamento, enviarTeste } from '../whatsapp/envio.js';
 import { obterJanela } from '../janela.js';
+import { fazerBackup, listarBackups } from '../backup/fazer.js';
+import { lerIndice } from '../backup/indice.js';
+import {
+  escolherBackup,
+  inspecionarBackup,
+  reiniciarApp,
+  restaurarBackup,
+} from '../backup/restaurar.js';
+import { aplicarAtualizacao, lerEstadoAtualizacao, procurarAtualizacao } from '../atualizacao.js';
+import { exportarDiagnostico } from '../diagnostico.js';
 import type { CaminhosApp } from '../caminhos.js';
 import { EH_WINDOWS } from '../platform/index.js';
 import { registrarCanal, semEntrada } from './registrar.js';
@@ -404,6 +414,69 @@ export function registrarCanais(caminhos: CaminhosApp): void {
       janela.webContents.send('whatsapp:mudou', estado);
     }
   });
+
+  // ---------- backup ----------
+  registrarCanal('backup:agora', semEntrada, async () => {
+    const config = reposConfig.lerConfig(ctx());
+    return fazerBackup(caminhos, config.pastaBackup);
+  });
+
+  registrarCanal('backup:listar', semEntrada, () => {
+    const config = reposConfig.lerConfig(ctx());
+    return {
+      pasta: config.pastaBackup || caminhos.backups,
+      ultimoEm: lerIndice(caminhos.backups).ultimoBackupEm,
+      backups: listarBackups(caminhos, config.pastaBackup),
+    };
+  });
+
+  registrarCanal('backup:escolherPasta', semEntrada, async () => {
+    const escolha = await dialog.showOpenDialog({
+      title: 'Onde guardar os backups',
+      defaultPath: caminhos.backups,
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (escolha.canceled || !escolha.filePaths[0]) return null;
+
+    reposConfig.salvarConfig(ctx(), { pastaBackup: escolha.filePaths[0] });
+    return escolha.filePaths[0];
+  });
+
+  registrarCanal('backup:abrirPasta', semEntrada, async () => {
+    const config = reposConfig.lerConfig(ctx());
+    const pasta = config.pastaBackup || caminhos.backups;
+    await abrirPasta(pasta);
+    return { pasta };
+  });
+
+  /** Só escolhe e inspeciona; restaurar de verdade é outro canal. */
+  registrarCanal('backup:escolherArquivo', semEntrada, async () => {
+    const arquivo = await escolherBackup(caminhos);
+    if (!arquivo) return null;
+    return { arquivo, conteudo: await inspecionarBackup(arquivo) };
+  });
+
+  registrarCanal(
+    'backup:restaurar',
+    z.object({ arquivo: z.string().min(1) }),
+    async ({ arquivo }) => {
+      const resultado = await restaurarBackup(arquivo, caminhos);
+      // O app inteiro já leu o banco antigo: reiniciar é obrigatório.
+      setTimeout(reiniciarApp, 1500);
+      return resultado;
+    },
+  );
+
+  // ---------- atualização ----------
+  registrarCanal('atualizacao:estado', semEntrada, () => lerEstadoAtualizacao());
+  registrarCanal('atualizacao:procurar', semEntrada, () => procurarAtualizacao());
+  registrarCanal('atualizacao:aplicar', semEntrada, async () => {
+    await aplicarAtualizacao();
+    return { aplicando: true };
+  });
+
+  // ---------- diagnóstico ----------
+  registrarCanal('diagnostico:exportar', semEntrada, () => exportarDiagnostico(caminhos));
 
   // ---------- busca global (Ctrl+K) ----------
   registrarCanal('busca:global', z.object({ termo: z.string() }), ({ termo }) =>

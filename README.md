@@ -10,10 +10,10 @@ atualizações.
 - **Mecânico**: versão web mobile, aberta no celular pelo Wi-Fi da oficina e
   servida pelo próprio notebook.
 
-> **Etapas 1 a 5 concluídas.** O balcão funciona ponta a ponta: cadastros,
+> **Etapas 1 a 5 e 8 concluídas.** O balcão funciona ponta a ponta: cadastros,
 > atendimento, OS com aprovação parcial, quadro por status, **orçamento em PDF
-> A5 e impressão**, e **envio pelo WhatsApp**. Falta o app do mecânico (etapa
-> 6), mídias pelo WhatsApp (7) e backup/auto-update (8).
+> A5 e impressão**, **envio pelo WhatsApp** e **backup, restauração e
+> auto-update**. Falta o app do mecânico (etapa 6) e as mídias pelo WhatsApp (7).
 
 ---
 
@@ -226,6 +226,37 @@ B: o link iria para o mesmo número inexistente, então o erro sobe para a tela.
 > publicam como `latest` — a linha 6.x está marcada como `legacy`. É um release
 > candidate; se aparecer problema de conexão, o caminho é testar
 > `@whiskeysockets/baileys@6.7.24`.
+
+---
+
+## Backup, restauração e atualização (etapa 8)
+
+**Backup diário automático.** Roda na inicialização se o último tiver mais de
+24h, e depois de 24 em 24h. O banco vai **inteiro** toda vez (é pequeno e é o
+que não pode ser perdido); as mídias vão **só as novas**, guiadas por um índice
+— recopiar gigabytes de foto todo dia encheria o destino. Na prática o segundo
+backup do dia cai de centenas de KB para poucos KB.
+
+A pasta é configurável e vale apontar para uma pasta do **Google Drive para
+computador**: aí a cópia sai do notebook sozinha. Ficam os 30 mais recentes.
+
+**Restauração.** A ordem importa e está no código: copia o banco atual para um
+`antes-de-restaurar-*.db`, fecha a conexão (senão o Windows trava o arquivo),
+apaga `-wal`/`-shm`, extrai, e só então troca o banco. O app reinicia no fim,
+porque metade do sistema já leu o banco antigo. As mídias são **somadas**, não
+substituídas — cada backup traz só as novas, e apagar as existentes perderia
+tudo dos backups anteriores.
+
+**Auto-update.** Verifica ao iniciar e a cada 6h, baixa em segundo plano, mas
+**nunca instala sozinho**: trocar o programa no meio de um atendimento fecharia
+a tela com o cliente na frente. E faz **backup obrigatório antes de instalar** —
+se o backup falhar, a atualização não acontece. Versão nova pode trazer migração
+de banco, e migração é exatamente onde dados se perdem.
+
+**Exportar diagnóstico.** Zip com os logs e números agregados (quantas OS, se o
+WhatsApp está conectado, quando foi o último backup). **Nenhum dado de
+cliente** — nome, telefone e placa nunca saem por aqui, porque um zip de suporte
+costuma acabar num grupo de WhatsApp.
 
 ---
 

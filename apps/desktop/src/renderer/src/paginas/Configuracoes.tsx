@@ -7,6 +7,9 @@ import { Pagina } from '../componentes/Pagina.js';
 import { Dialogo } from '../componentes/Dialogo.js';
 import { Aviso } from '../componentes/Aviso.js';
 import { CartaoWhatsApp } from '../componentes/CartaoWhatsApp.js';
+import { CartaoBackup } from '../componentes/CartaoBackup.js';
+import { CartaoAtualizacao } from '../componentes/CartaoAtualizacao.js';
+import { CartaoDiagnostico } from '../componentes/CartaoDiagnostico.js';
 import { useConsulta } from '../hooks/useConsulta.js';
 import { temPonte, useInfoApp } from '../hooks/useInfoApp.js';
 import { mensagemDeErro } from '../erro.js';
@@ -53,6 +56,9 @@ export function Configuracoes() {
             <CartaoWhatsApp />
             <Textos />
             <Usuarios />
+            <CartaoBackup />
+            <CartaoAtualizacao />
+            <CartaoDiagnostico />
           </>
         )}
 
@@ -72,9 +78,6 @@ export function Configuracoes() {
           {info && !info.ehWindows ? ' · modo desenvolvimento' : ''}
           {noNavegador ? 'pré-visualização no navegador' : ''}
         </span>
-        <Botao variante="discreto" disabled>
-          Procurar atualizações
-        </Botao>
       </footer>
     </Pagina>
   );

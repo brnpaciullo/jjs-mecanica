@@ -30,6 +30,9 @@ import type { CaminhosApp } from '../main/caminhos.js';
 import type { InfoApp } from '../main/ipc/canais.js';
 import type { ImpressoraNaTela, ResultadoPdf } from '../main/pdf.js';
 import type { EstadoWhatsApp } from '../main/whatsapp/estado.js';
+import type { BackupNaTela, ResultadoBackup } from '../main/backup/fazer.js';
+import type { ConteudoBackup, ResultadoRestauracao } from '../main/backup/restaurar.js';
+import type { EstadoAtualizacao } from '../main/atualizacao.js';
 import type { ResultadoEnvio } from '../main/whatsapp/envio.js';
 
 /**
@@ -214,6 +217,33 @@ const api = {
       ipcRenderer.on('whatsapp:mudou', embrulho);
       return () => ipcRenderer.removeListener('whatsapp:mudou', embrulho);
     },
+  },
+
+  backup: {
+    agora: () => invocar<ResultadoBackup>('backup:agora'),
+    listar: () =>
+      invocar<{ pasta: string; ultimoEm: string | null; backups: BackupNaTela[] }>('backup:listar'),
+    escolherPasta: () => invocar<string | null>('backup:escolherPasta'),
+    abrirPasta: () => invocar<{ pasta: string }>('backup:abrirPasta'),
+    escolherArquivo: () =>
+      invocar<{ arquivo: string; conteudo: ConteudoBackup } | null>('backup:escolherArquivo'),
+    restaurar: (arquivo: string) => invocar<ResultadoRestauracao>('backup:restaurar', { arquivo }),
+  },
+
+  atualizacao: {
+    estado: () => invocar<EstadoAtualizacao>('atualizacao:estado'),
+    procurar: () => invocar<EstadoAtualizacao>('atualizacao:procurar'),
+    aplicar: () => invocar<{ aplicando: boolean }>('atualizacao:aplicar'),
+    /** O main empurra o andamento do download. Devolve como parar de ouvir. */
+    aoMudar: (ouvinte: (estado: EstadoAtualizacao) => void) => {
+      const embrulho = (_e: IpcRendererEvent, estado: EstadoAtualizacao) => ouvinte(estado);
+      ipcRenderer.on('atualizacao:mudou', embrulho);
+      return () => ipcRenderer.removeListener('atualizacao:mudou', embrulho);
+    },
+  },
+
+  diagnostico: {
+    exportar: () => invocar<string | null>('diagnostico:exportar'),
   },
 
   busca: {

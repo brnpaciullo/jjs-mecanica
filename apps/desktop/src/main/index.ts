@@ -8,6 +8,8 @@ import { criarJanela, mostrarJanela, obterJanela } from './janela.js';
 import { criarBandeja, destruirBandeja } from './bandeja.js';
 import { registrarCanais } from './ipc/canais.js';
 import { encerrarWhatsApp, iniciarWhatsApp } from './whatsapp/conexao.js';
+import { agendarBackups, pararBackups } from './backup/agenda.js';
+import { iniciarAtualizacoes, pararAtualizacoes } from './atualizacao.js';
 
 /**
  * Fixa o nome antes de qualquer app.getPath('userData').
@@ -79,6 +81,9 @@ function iniciar(): void {
       log.info('[app] sem sessão do WhatsApp; aguardando o QR em Configurações');
     }
 
+    agendarBackups(caminhos);
+    iniciarAtualizacoes(caminhos);
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) criarJanela(true);
     });
@@ -99,6 +104,8 @@ function iniciar(): void {
   });
 
   app.on('will-quit', () => {
+    pararAtualizacoes();
+    pararBackups();
     encerrarWhatsApp();
     destruirBandeja();
     fecharBanco();

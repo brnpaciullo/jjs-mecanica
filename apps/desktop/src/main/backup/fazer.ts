@@ -148,7 +148,8 @@ function limparAntigos(pasta: string, manter = QUANTOS_MANTER): number {
 
   const excedente = zips.slice(manter);
   for (const zip of excedente) rmSync(zip.caminho, { force: true });
-  if (excedente.length > 0) log.info(`[backup] ${excedente.length} backup(s) antigo(s) removido(s)`);
+  if (excedente.length > 0)
+    log.info(`[backup] ${excedente.length} backup(s) antigo(s) removido(s)`);
   return excedente.length;
 }
 
