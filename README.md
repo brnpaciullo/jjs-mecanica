@@ -10,10 +10,10 @@ atualizações.
 - **Mecânico**: versão web mobile, aberta no celular pelo Wi-Fi da oficina e
   servida pelo próprio notebook.
 
-> **Etapas 1 a 5 e 8 concluídas.** O balcão funciona ponta a ponta: cadastros,
+> **Etapas 1 a 6 e 8 concluídas.** O balcão funciona ponta a ponta: cadastros,
 > atendimento, OS com aprovação parcial, quadro por status, **orçamento em PDF
-> A5 e impressão**, **envio pelo WhatsApp** e **backup, restauração e
-> auto-update**. Falta o app do mecânico (etapa 6) e as mídias pelo WhatsApp (7).
+> A5 e impressão**, **envio pelo WhatsApp**, **backup e auto-update** e o
+> **app do mecânico no celular**. Falta só as mídias pelo WhatsApp (etapa 7).
 
 ---
 
@@ -82,17 +82,20 @@ npm run dev
 
 ### Scripts
 
-| Comando                   | O que faz                                               |
-| ------------------------- | ------------------------------------------------------- |
-| `npm run dev`             | Abre o app com recarga automática                       |
-| `npm run dev:web`         | Só a tela, no navegador, sem Electron (útil por SSH)    |
-| `npm run build`           | Compila main, preload e renderer em `apps/desktop/out/` |
-| `npm run lint`            | ESLint em todo o monorepo                               |
-| `npm run typecheck`       | `tsc --noEmit` em cada workspace                        |
-| `npm test`                | Testes unitários (vitest)                               |
-| `npm run verificar:fluxo` | Teste de fumaça do fluxo do balcão contra um banco real |
-| `npm run db:gerar`        | Gera o SQL da migration depois de mexer no `schema.ts`  |
-| `npm run formatar`        | Prettier                                                |
+| Comando                    | O que faz                                               |
+| -------------------------- | ------------------------------------------------------- |
+| `npm run dev`              | Abre o app com recarga automática                       |
+| `npm run dev:web`          | Só a tela, no navegador, sem Electron (útil por SSH)    |
+| `npm run build`            | Compila main, preload e renderer em `apps/desktop/out/` |
+| `npm run lint`             | ESLint em todo o monorepo                               |
+| `npm run typecheck`        | `tsc --noEmit` em cada workspace                        |
+| `npm test`                 | Testes unitários (vitest)                               |
+| `npm run verificar:fluxo`  | Teste de fumaça do fluxo do balcão contra um banco real |
+| `npm run verificar:backup` | Backup e restauração contra banco e mídias reais        |
+| `npm run verificar:lan`    | Servidor do celular no ar: pareamento, PIN, upload      |
+| `npm run dev:mobile`       | App do mecânico no Vite, falando com o Electron na 4570 |
+| `npm run db:gerar`         | Gera o SQL da migration depois de mexer no `schema.ts`  |
+| `npm run formatar`         | Prettier                                                |
 
 ### Onde ficam os dados
 
@@ -229,6 +232,55 @@ B: o link iria para o mesmo número inexistente, então o erro sobe para a tela.
 
 ---
 
+## App do mecânico (etapa 6)
+
+Um servidor **Fastify na porta 4570**, dentro do processo main, serve o app do
+mecânico e uma API REST — as duas coisas reusando **os mesmos repositórios** do
+balcão, sem regra duplicada.
+
+### Como o mecânico entra
+
+1. No balcão: **Configurações → Celular do mecânico → Conectar um celular**
+2. O celular lê o QR (`http://<ip>:4570/parear?token=...`)
+3. O token vira um **cookie de dispositivo de 1 ano**
+4. Daí em diante entra só com o **PIN**
+
+O token do QR **expira em 10 minutos e serve uma vez só** — ele fica exposto na
+tela do balcão, onde passa cliente o tempo todo. As tentativas de PIN têm
+limite (5 por minuto): PIN de 4 dígitos é curto, e é isso que impede alguém de
+testar os 10 mil.
+
+### Decisões que valem explicar
+
+- **Câmera por `<input capture>`, não `getUserMedia`.** A API de câmera do
+  navegador exige HTTPS, e o servidor da oficina é HTTP na rede local. O input
+  abre a câmera nativa do celular, que funciona em HTTP.
+- **Fotos reduzidas no próprio celular** (1920px, JPEG 0.8, via canvas) antes de
+  subir. Uma foto de 4 MB no Wi-Fi da oficina é pedir para falhar.
+- **Fila de envio com retentativa** e espera crescente. O Wi-Fi cai quando o
+  mecânico anda até embaixo do carro; nada se perde.
+- **Vídeo converte em segundo plano** (H.264 720p, CRF 28, `+faststart`), um de
+  cada vez. O registro nasce `pendente` e a tela mostra "Processando vídeo..."
+  — o mecânico não fica esperando para continuar o serviço.
+- **Lista de cards, não quadro de colunas.** Arrastar card lado a lado não
+  funciona numa tela segurada com uma mão.
+- **O IP é escolhido com critério**: interfaces virtuais (Docker, WSL, VPN)
+  são descartadas. Um QR com IP de bridge do Docker simplesmente não conecta.
+
+### Firewall
+
+O instalador NSIS cria a regra de entrada para a porta 4570 em redes privadas.
+**Sem ela o celular não conecta**, e a única pista seria o app dizendo "não
+encontrei o computador da oficina" com tudo aparentemente certo. Em
+Configurações há um botão para recriar a regra.
+
+> **ffmpeg e o npm 12.** O `ffmpeg-static` baixa o binário num script de
+> instalação, e o npm 12 bloqueia scripts de dependência por padrão. Sem ele os
+> vídeos ficam no formato original (maiores, mas funcionam). Para habilitar a
+> conversão: `npm install-scripts approve ffmpeg-static && npm install`.
+
+---
+
 ## Backup, restauração e atualização (etapa 8)
 
 **Backup diário automático.** Roda na inicialização se o último tiver mais de
@@ -342,6 +394,6 @@ clientes.
 3. ✅ **OS completa no balcão** — recepção, tela da OS, itens, totais, quadro, linha do tempo
 4. ✅ **PDF e impressão** — template A5, orçamento e OS, fallback A4 com 2 vias
 5. ✅ **WhatsApp** — conexão por QR, envio de orçamento, aviso de pronto, fallback `wa.me`
-6. Servidor LAN e app do mecânico — Fastify, pareamento, upload de fotos e vídeos
+6. ✅ **Servidor LAN e app do mecânico** — Fastify, pareamento, upload de fotos e vídeos
 7. Mídias pelo WhatsApp — captura por legenda, caixa "Mídias sem OS"
-8. Backup, restauração e auto-update — instalador final
+8. ✅ **Backup, restauração e auto-update** — instalador final

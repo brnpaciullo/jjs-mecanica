@@ -10,6 +10,7 @@ import { registrarCanais } from './ipc/canais.js';
 import { encerrarWhatsApp, iniciarWhatsApp } from './whatsapp/conexao.js';
 import { agendarBackups, pararBackups } from './backup/agenda.js';
 import { iniciarAtualizacoes, pararAtualizacoes } from './atualizacao.js';
+import { iniciarServidorLan, pararServidorLan } from './lan/servidor.js';
 
 /**
  * Fixa o nome antes de qualquer app.getPath('userData').
@@ -84,6 +85,12 @@ function iniciar(): void {
     agendarBackups(caminhos);
     iniciarAtualizacoes(caminhos);
 
+    // O celular do mecânico precisa alcançar o notebook o tempo todo, mesmo
+    // com a janela escondida na bandeja.
+    void iniciarServidorLan(caminhos).catch((erro) =>
+      log.error('[app] não consegui subir o acesso para o celular', erro),
+    );
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) criarJanela(true);
     });
@@ -104,6 +111,7 @@ function iniciar(): void {
   });
 
   app.on('will-quit', () => {
+    void pararServidorLan();
     pararAtualizacoes();
     pararBackups();
     encerrarWhatsApp();

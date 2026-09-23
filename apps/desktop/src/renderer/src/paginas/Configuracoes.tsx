@@ -7,6 +7,7 @@ import { Pagina } from '../componentes/Pagina.js';
 import { Dialogo } from '../componentes/Dialogo.js';
 import { Aviso } from '../componentes/Aviso.js';
 import { CartaoWhatsApp } from '../componentes/CartaoWhatsApp.js';
+import { CartaoCelular } from '../componentes/CartaoCelular.js';
 import { CartaoBackup } from '../componentes/CartaoBackup.js';
 import { CartaoAtualizacao } from '../componentes/CartaoAtualizacao.js';
 import { CartaoDiagnostico } from '../componentes/CartaoDiagnostico.js';
@@ -54,6 +55,7 @@ export function Configuracoes() {
           <>
             <DadosDaOficina />
             <CartaoWhatsApp />
+            <CartaoCelular />
             <Textos />
             <Usuarios />
             <CartaoBackup />

@@ -25,6 +25,7 @@ import { EtiquetaStatus } from '../componentes/EtiquetaStatus.js';
 import { IndicadorSalvo } from '../componentes/IndicadorSalvo.js';
 import { CampoDinheiro } from '../componentes/CampoDinheiro.js';
 import { TabelaItens } from '../componentes/TabelaItens.js';
+import { GaleriaDeMidias } from '../componentes/GaleriaDeMidias.js';
 import { useConsulta } from '../hooks/useConsulta.js';
 import { useWhatsApp } from '../hooks/useWhatsApp.js';
 import { useSalvamentoAutomatico } from '../hooks/useSalvamentoAutomatico.js';
@@ -239,6 +240,8 @@ export function TelaOs() {
       </section>
 
       <Resumo ordem={ordem} totais={totais} aoSalvar={consulta.recarregar} />
+
+      <GaleriaDeMidias ordemId={ordemId} />
 
       <LinhaDoTempo eventos={eventos} />
 

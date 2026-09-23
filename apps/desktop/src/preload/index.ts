@@ -33,6 +33,8 @@ import type { EstadoWhatsApp } from '../main/whatsapp/estado.js';
 import type { BackupNaTela, ResultadoBackup } from '../main/backup/fazer.js';
 import type { ConteudoBackup, ResultadoRestauracao } from '../main/backup/restaurar.js';
 import type { EstadoAtualizacao } from '../main/atualizacao.js';
+import type { EstadoDoServidor } from '../main/lan/servidor.js';
+import type { MidiaNaTela } from '../main/midias/consultar.js';
 import type { ResultadoEnvio } from '../main/whatsapp/envio.js';
 
 /**
@@ -244,6 +246,33 @@ const api = {
 
   diagnostico: {
     exportar: () => invocar<string | null>('diagnostico:exportar'),
+  },
+
+  celular: {
+    estado: () =>
+      invocar<
+        EstadoDoServidor & {
+          dispositivos: {
+            id: number;
+            nome: string;
+            ultimoAcesso: string | null;
+            revogado: boolean;
+            temSessaoAberta: boolean;
+          }[];
+          firewallOk: boolean;
+        }
+      >('celular:estado'),
+    qr: () => invocar<{ url: string; expiraEm: number; qrDataUri: string }>('celular:qr'),
+    cancelarQr: () => invocar<{ cancelado: boolean }>('celular:cancelarQr'),
+    revogar: (id: number) => invocar<{ revogado: boolean }>('celular:revogar', { id }),
+    liberarFirewall: () =>
+      invocar<{ liberou: boolean; jaExistia: boolean }>('celular:liberarFirewall'),
+  },
+
+  midias: {
+    daOrdem: (id: number) => invocar<MidiaNaTela[]>('midias:daOrdem', { id }),
+    enviarAoCliente: (id: number, incluir: boolean) =>
+      invocar<unknown>('midias:enviarAoCliente', { id, incluir }),
   },
 
   busca: {

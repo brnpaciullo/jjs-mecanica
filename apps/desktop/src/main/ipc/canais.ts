@@ -35,6 +35,16 @@ import {
 } from '../backup/restaurar.js';
 import { aplicarAtualizacao, lerEstadoAtualizacao, procurarAtualizacao } from '../atualizacao.js';
 import { exportarDiagnostico } from '../diagnostico.js';
+import { lerEstadoDoServidor } from '../lan/servidor.js';
+import {
+  descartarTokenDePareamento,
+  gerarTokenDePareamento,
+  listarDispositivos,
+  revogarDispositivo,
+} from '../lan/sessao.js';
+import { liberarPortaNoFirewall, regraDeFirewallExiste } from '../platform/index.js';
+import { definirEnvioAoCliente, listarMidias } from '../midias/consultar.js';
+import QRCode from 'qrcode';
 import type { CaminhosApp } from '../caminhos.js';
 import { EH_WINDOWS } from '../platform/index.js';
 import { registrarCanal, semEntrada } from './registrar.js';
@@ -477,6 +487,60 @@ export function registrarCanais(caminhos: CaminhosApp): void {
 
   // ---------- diagnóstico ----------
   registrarCanal('diagnostico:exportar', semEntrada, () => exportarDiagnostico(caminhos));
+
+  // ---------- celular do mecânico ----------
+  registrarCanal('celular:estado', semEntrada, async () => {
+    const servidor = lerEstadoDoServidor();
+    return {
+      ...servidor,
+      dispositivos: listarDispositivos(),
+      firewallOk: await regraDeFirewallExiste(),
+    };
+  });
+
+  /** Gera o QR que o celular lê. Vale 10 minutos e serve uma vez só. */
+  registrarCanal('celular:qr', semEntrada, async () => {
+    const servidor = lerEstadoDoServidor();
+    if (!servidor.rodando || !servidor.ip) {
+      throw new Error(
+        servidor.erro ??
+          'O computador não está numa rede. Conecte no Wi-Fi da oficina e tente de novo.',
+      );
+    }
+
+    const { token, expiraEm } = gerarTokenDePareamento();
+    const url = `http://${servidor.ip}:${servidor.porta}/parear?token=${token}`;
+
+    return {
+      url,
+      expiraEm,
+      qrDataUri: await QRCode.toDataURL(url, { margin: 1, width: 320 }),
+    };
+  });
+
+  registrarCanal('celular:cancelarQr', semEntrada, () => {
+    descartarTokenDePareamento();
+    return { cancelado: true };
+  });
+
+  registrarCanal('celular:revogar', id, ({ id: dispositivoId }) => {
+    revogarDispositivo(dispositivoId);
+    return { revogado: true };
+  });
+
+  registrarCanal('celular:liberarFirewall', semEntrada, async () => {
+    const liberou = await liberarPortaNoFirewall(lerEstadoDoServidor().porta);
+    return { liberou, jaExistia: await regraDeFirewallExiste() };
+  });
+
+  // ---------- mídias ----------
+  registrarCanal('midias:daOrdem', id, ({ id: ordemId }) => listarMidias(ctx(), ordemId));
+
+  registrarCanal(
+    'midias:enviarAoCliente',
+    z.object({ id: z.number().int().positive(), incluir: z.boolean() }),
+    ({ id: midiaId, incluir }) => definirEnvioAoCliente(ctx(), midiaId, incluir),
+  );
 
   // ---------- busca global (Ctrl+K) ----------
   registrarCanal('busca:global', z.object({ termo: z.string() }), ({ termo }) =>

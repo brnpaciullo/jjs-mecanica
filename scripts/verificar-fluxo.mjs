@@ -34,7 +34,15 @@ await build({
   platform: 'node',
   format: 'cjs',
   // Nativo: precisa ser resolvido em tempo de execução, nunca empacotado.
-  external: ['better-sqlite3', 'archiver', 'yauzl', 'electron'],
+  external: [
+    'better-sqlite3',
+    'archiver',
+    'yauzl',
+    'electron',
+    'sharp',
+    'fluent-ffmpeg',
+    'ffmpeg-static',
+  ],
   outfile: bundle,
   logLevel: 'error',
 });

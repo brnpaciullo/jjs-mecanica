@@ -13,9 +13,10 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @jjs/desktop",
+    "build": "npm run build --workspace @jjs/mobile && npm run build --workspace @jjs/desktop",
     "db:gerar": "npm run gerar --workspace @jjs/db",
     "dev": "npm run dev --workspace @jjs/desktop",
+    "dev:mobile": "npm run dev --workspace @jjs/mobile",
     "dev:web": "npm run dev:web --workspace @jjs/desktop",
     "formatar": "prettier --write .",
     "lint": "eslint .",
@@ -26,7 +27,8 @@
     "test:observar": "vitest",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "verificar:backup": "node scripts/verificar-fluxo.mjs verificar-backup --electron",
-    "verificar:fluxo": "node scripts/verificar-fluxo.mjs"
+    "verificar:fluxo": "node scripts/verificar-fluxo.mjs",
+    "verificar:lan": "node scripts/verificar-fluxo.mjs verificar-lan --electron"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

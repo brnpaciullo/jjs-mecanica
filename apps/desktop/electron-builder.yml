@@ -23,6 +23,12 @@ extraResources:
     to: migrations
     filter:
       - '**/*'
+  # O app do mecanico e servido pelo Fastify a partir daqui. Fica fora do asar
+  # porque o servidor entrega os arquivos direto do disco.
+  - from: ../mobile/dist
+    to: mobile
+    filter:
+      - '**/*'
 
 asar: true
 asarUnpack:

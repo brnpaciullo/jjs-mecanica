@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import '@jjs/ui/tokens.css';
+
+@layer base {
+  html {
+    /* Corpo maior no celular: a tela é lida com a mão suja, de longe. */
+    font-size: 17px;
+  }
+
+  body {
+    background: var(--color-jjs-papel);
+    /* Respeita o entalhe e a barra de gestos do celular. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+    overscroll-behavior-y: contain;
+  }
+
+  /* Sem zoom automático do iOS ao focar um campo. */
+  input,
+  textarea,
+  select,
+  button {
+    font-size: max(16px, 1rem);
+  }
+}
