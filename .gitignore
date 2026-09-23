@@ -16,16 +16,21 @@ logs/
 
 # Dados da oficina — nunca versionar.
 # Em produção isto vive em %APPDATA%\jjs-mecanica, fora do projeto. As regras
-# abaixo existem para o caso de alguém copiar um banco ou uma sessão para cá
-# durante um teste: são dados de cliente e a credencial do WhatsApp.
+# existem para o caso de alguém copiar um banco ou uma sessão para cá durante
+# um teste: são dados de cliente e a credencial do WhatsApp.
+#
+# A barra inicial é obrigatória: só a RAIZ do projeto. Sem ela, `midias/`
+# casava com `apps/desktop/src/main/midias/` e o código-fonte ficava de fora
+# do commit — o projeto compilava aqui e quebrava no CI, porque os arquivos
+# existiam no disco e não no repositório.
 *.db
 *.db-wal
 *.db-shm
-whatsapp-session/
 creds.json
-midias/
-backups/
-pdfs/
+/midias/
+/backups/
+/pdfs/
+/whatsapp-session/
 
 # Segredos
 .env
