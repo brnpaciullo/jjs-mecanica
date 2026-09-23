@@ -11,6 +11,7 @@ import { encerrarWhatsApp, iniciarWhatsApp } from './whatsapp/conexao.js';
 import { agendarBackups, pararBackups } from './backup/agenda.js';
 import { iniciarAtualizacoes, pararAtualizacoes } from './atualizacao.js';
 import { iniciarServidorLan, pararServidorLan } from './lan/servidor.js';
+import { registrarEsquemaDeMidia, servirMidias } from './midias/protocolo.js';
 
 /**
  * Fixa o nome antes de qualquer app.getPath('userData').
@@ -47,6 +48,10 @@ function iniciar(): void {
   garantirPastas(caminhos);
   configurarLog(caminhos.logs);
 
+  // Antes do app ficar pronto: depois disso o Chromium já decidiu como trata
+  // o esquema, e registrar não tem mais efeito.
+  registrarEsquemaDeMidia();
+
   app.on('second-instance', () => {
     log.info('[app] segunda instância bloqueada, trazendo a janela para a frente');
     mostrarJanela();
@@ -56,6 +61,7 @@ function iniciar(): void {
     // O banco precisa estar migrado antes de qualquer tela abrir.
     iniciarBanco(caminhos);
     registrarCanais(caminhos);
+    servirMidias(caminhos);
 
     // --minimizado e o argumento usado quando o Windows sobe o app no login.
     const comecarEscondido = process.argv.includes('--minimizado');

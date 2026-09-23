@@ -5,6 +5,7 @@ import type { MidiaNaTela } from '../../../main/midias/consultar.js';
 import { cn } from '@jjs/ui';
 import { useConsulta } from '../hooks/useConsulta.js';
 import { Aviso } from './Aviso.js';
+import { urlDaMidia } from '../midia.js';
 
 /**
  * Fotos e vídeos da OS, agrupados pelo momento em que foram feitos.
@@ -60,12 +61,29 @@ export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
                       </span>
                     ) : (
                       <>
-                        <img
-                          src={m.thumbUrl ?? m.url}
-                          alt={m.legenda ?? ROTULO_MOMENTO[m.momento]}
-                          loading="lazy"
-                          className="size-full object-cover"
-                        />
+                        {/*
+                          Vídeo sem miniatura acontece quando o ffmpeg não veio
+                          junto: aí não há quadro para mostrar. Um <img> apontado
+                          para o .mp4 ficaria em branco para sempre, então o
+                          lugar recebe o ícone de play e nada mais.
+                        */}
+                        {m.thumbUrl ? (
+                          <img
+                            src={urlDaMidia(m.thumbUrl)}
+                            alt={m.legenda ?? ROTULO_MOMENTO[m.momento]}
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        ) : m.tipo === 'foto' ? (
+                          <img
+                            src={urlDaMidia(m.url)}
+                            alt={m.legenda ?? ROTULO_MOMENTO[m.momento]}
+                            loading="lazy"
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex size-full items-center justify-center bg-jjs-papel" />
+                        )}
                         {m.tipo === 'video' ? (
                           <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
                             <Play size={32} fill="currentColor" />
@@ -77,7 +95,8 @@ export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
 
                   <label
                     className={cn(
-                      'flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-campo border px-2 text-sm font-semibold',
+                      'relative flex min-h-10 cursor-pointer items-center justify-center gap-1.5',
+                      'rounded-campo border px-2 text-sm font-semibold',
                       m.incluirParaCliente
                         ? 'border-jjs-verde bg-jjs-verde/15 text-jjs-preto'
                         : 'border-jjs-borda text-jjs-texto-fraco',
@@ -118,14 +137,14 @@ export function GaleriaDeMidias({ ordemId }: { ordemId: number }) {
 
           {aberta.tipo === 'video' ? (
             <video
-              src={aberta.url}
+              src={urlDaMidia(aberta.url)}
               controls
               autoPlay
               className="max-h-full max-w-full rounded-card"
             />
           ) : (
             <img
-              src={aberta.url}
+              src={urlDaMidia(aberta.url)}
               alt={aberta.legenda ?? ''}
               className="max-h-full max-w-full rounded-card object-contain"
             />

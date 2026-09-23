@@ -19,12 +19,18 @@ const RAIZ = resolve(__dirname, 'src/renderer');
  * `file:` entra junto de 'self' porque a tela empacotada e carregada por
  * file://, onde a origem e nula e 'self' sozinho nao casa com as fontes e o
  * logo. Codigo remoto continua bloqueado, que e o ponto.
+ *
+ * `jjs-midia:` e o protocolo que o main registra para servir as fotos e os
+ * videos da OS (ver src/main/midias/protocolo.ts). Precisa aparecer em
+ * `media-src` tambem: sem essa linha o video herda o `default-src` e o player
+ * abre mudo e preto, sem dizer por que.
  */
 const CSP = [
   "default-src 'self' file:",
   "script-src 'self' file:",
   "style-src 'self' 'unsafe-inline' file:",
-  "img-src 'self' data: blob: file:",
+  "img-src 'self' data: blob: file: jjs-midia:",
+  "media-src 'self' file: jjs-midia:",
   "font-src 'self' data: file:",
   "connect-src 'self' file:",
 ].join('; ');

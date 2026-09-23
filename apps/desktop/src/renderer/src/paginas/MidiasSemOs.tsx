@@ -9,6 +9,7 @@ import { Dialogo } from '../componentes/Dialogo.js';
 import { Aviso } from '../componentes/Aviso.js';
 import { useConsulta } from '../hooks/useConsulta.js';
 import { mensagemDeErro } from '../erro.js';
+import { urlDaMidia } from '../midia.js';
 
 /**
  * Caixa de entrada das mídias que chegaram pelo WhatsApp sem OS identificada.
@@ -57,7 +58,7 @@ export function MidiasSemOs() {
                 ) : (
                   <>
                     <img
-                      src={m.thumbUrl ?? m.url}
+                      src={urlDaMidia(m.thumbUrl ?? m.url)}
                       alt={m.legenda ?? 'Mídia recebida'}
                       loading="lazy"
                       className="size-full object-cover"
