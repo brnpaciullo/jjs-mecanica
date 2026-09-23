@@ -47,6 +47,25 @@ jobs:
       # só, e quando o upload do .exe de 122 MB falhou sobrou um release
       # PUBLICADO sem instalador — e o artefato nem chegou a ser salvo, porque
       # vinha depois. Agora o instalador é garantido antes de qualquer upload.
+      # Pela RAIZ, não pelo workspace: o build da raiz monta o app do
+      # mecânico antes do desktop. Chamando o script do workspace, só o
+      # Electron era construído e o instalador saía sem o app do celular —
+      # o pareamento funcionava e o celular caía num 404 logo depois.
+      - name: Construir o app do mecânico e o desktop
+        run: npm run build
+
+      # Sem isto o instalador sai silenciosamente incompleto: o
+      # extraResources não reclama de uma pasta de origem que não existe.
+      - name: Conferir que o app do mecânico foi construído
+        shell: bash
+        run: |
+          test -f apps/mobile/dist/index.html || {
+            echo "::error::apps/mobile/dist não foi construído."
+            exit 1
+          }
+          echo "App do mecânico pronto:"
+          ls apps/mobile/dist
+
       # --publish never é obrigatório aqui. Sem a opção explícita o
       # electron-builder usa "onTagOrDraft" e, estando numa tag, publica
       # sozinho já neste passo — foi assim que a v0.0.3 falhou no upload e

@@ -142,6 +142,25 @@ export async function iniciarServidorLan(caminhos: CaminhosApp): Promise<EstadoD
     log.warn(
       '[lan] build do app do mecânico não encontrada. Rode `npm run build` antes de empacotar.',
     );
+
+    // Sem isto o celular receberia o 404 cru do Fastify depois de parear —
+    // foi exatamente o que aconteceu na v0.0.4. A tela precisa dizer o que
+    // houve, porque quem lê é o mecânico, não quem empacotou.
+    fastify.setNotFoundHandler((req, resposta) => {
+      if (req.url.startsWith('/api/')) {
+        return resposta.code(404).send({ erro: 'nao_encontrado' });
+      }
+      return resposta
+        .code(503)
+        .type('text/html; charset=utf-8')
+        .send(
+          paginaDeAviso(
+            'O app do mecânico não foi instalado',
+            'O celular conectou no computador da oficina, mas esta versão do sistema veio sem o aplicativo. ' +
+              'Avise quem cuida do sistema: falta a build do app do mecânico no instalador.',
+          ),
+        );
+    });
   }
 
   try {
@@ -162,6 +181,20 @@ export async function iniciarServidorLan(caminhos: CaminhosApp): Promise<EstadoD
   }
 
   return lerEstadoDoServidor();
+}
+
+/** Página mínima para avisos que acontecem fora do app React. */
+function paginaDeAviso(titulo: string, texto: string): string {
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${titulo}</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#15171B;color:#fff;margin:0;
+      display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+ div{max-width:32rem}
+ h1{color:#F2B705;font-size:1.6rem;margin:0 0 .75rem}
+ p{font-size:1.15rem;line-height:1.5;margin:0}
+</style></head><body><div><h1>${titulo}</h1><p>${texto}</p></div></body></html>`;
 }
 
 export async function pararServidorLan(): Promise<void> {
