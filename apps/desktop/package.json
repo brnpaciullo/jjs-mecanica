@@ -8,7 +8,7 @@
     "build": "electron-vite build",
     "dev": "electron-vite dev",
     "dev:web": "vite --config vite.renderer.config.ts",
-    "empacotar:win": "npm run build && electron-builder --win nsis",
+    "empacotar:win": "npm run build && electron-builder --win nsis --publish never",
     "previa": "electron-vite preview",
     "publicar:win": "npm run build && electron-builder --win nsis --publish always",
     "rebuild:nativos": "electron-builder install-app-deps",
